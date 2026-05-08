@@ -16,17 +16,23 @@ void clear_screen() {
 }
 
 void print_char(char c) {
-    // Agar 'Enter' (\n) aaye toh next line par jao
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
+    } else if (c == '\b') { // BACKSPACE LOGIC
+        if (cursor_x > 0) {
+            cursor_x--;
+        } else if (cursor_y > 0) {
+            cursor_y--;
+            cursor_x = 79;
+        }
+        // Character ko screen se hatane ke liye space print kar do
+        int index = (cursor_y * 80) + cursor_x;
+        vga_buffer[index] = (unsigned short)' ' | (0x0F << 8);
     } else {
-        // Character ko memory mein daalo
         int index = (cursor_y * 80) + cursor_x;
         vga_buffer[index] = (unsigned short)c | (0x0F << 8);
         cursor_x++;
-        
-        // Agar line khatam ho jaye, toh next line par jao
         if (cursor_x >= 80) {
             cursor_x = 0;
             cursor_y++;
