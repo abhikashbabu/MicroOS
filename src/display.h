@@ -23,6 +23,7 @@
 void set_color(unsigned char fg, unsigned char bg);
 void draw_top_bar(const char* title);
 void clear_screen();
+void scroll_screen();
 void print_string(const char* str);
 void print_char(char c);
 
