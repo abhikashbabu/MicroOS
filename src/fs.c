@@ -21,6 +21,56 @@ void init_fs() {
 
     file_count = 2;
 }
+void create_file(char* name, char* content) {
+    if (file_count >= 10) return; // Maximum 10 files allowed in memory
+    
+    int i = 0;
+    // File ka naam copy karna
+    while(name[i] != '\0' && i < 31) { 
+        file_system[file_count].name[i] = name[i]; 
+        i++; 
+    }
+    file_system[file_count].name[i] = '\0';
+
+    i = 0;
+    // File ka content (code) copy karna
+    while(content[i] != '\0' && i < 255) { 
+        file_system[file_count].content[i] = content[i]; 
+        i++; 
+    }
+    file_system[file_count].content[i] = '\0';
+    
+    file_system[file_count].size = i;
+    file_count++; // Total files ka number badha do
+}
+// NAYA: File delete karne ka function
+void delete_file(char* filename) {
+    int idx = find_file(filename);
+    if (idx == -1) return;
+    
+    // Baaki files ko left shift kar do (Pichli file ko overwrite kardo)
+    for (int i = idx; i < file_count - 1; i++) {
+        file_system[i] = file_system[i + 1];
+    }
+    file_count--; // Total count kam kar do
+}
+
+// NAYA: Existing file mein naya code add karne ka function
+void append_file(char* filename, char* extra) {
+    int idx = find_file(filename);
+    if (idx == -1) return;
+    
+    int curr_len = file_system[idx].size;
+    int i = 0;
+    
+    // Puraane content ke aage naya text copy karo
+    while(extra[i] != '\0' && (curr_len + i) < 254) {
+        file_system[idx].content[curr_len + i] = extra[i];
+        i++;
+    }
+    file_system[idx].content[curr_len + i] = '\0';
+    file_system[idx].size = curr_len + i;
+}
 
 int find_file(char* filename) {
     for (int i = 0; i < file_count; i++) {
