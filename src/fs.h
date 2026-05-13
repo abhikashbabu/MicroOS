@@ -15,5 +15,8 @@ extern int file_count;
 // Functions declare kar rahe hain
 void init_fs();
 int find_file(char* filename);
+void create_file(char* name, char* content);
+void delete_file(char* filename);             // NAYA
+void append_file(char* filename, char* extra);// NAYA
 
 #endif
