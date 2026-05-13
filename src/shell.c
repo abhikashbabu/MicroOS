@@ -79,6 +79,52 @@ void execute_command(char* command) {
             print_string("\n");
         }
     }
+    // NAYA: 'create <filename> <content>' command (Live Coding!)
+    else if (command[0] == 'c' && command[1] == 'r' && command[2] == 'e' && command[3] == 'a' && command[4] == 't' && command[5] == 'e' && command[6] == ' ') {
+        int idx = 7;
+        char filename[32];
+        int f_idx = 0;
+        
+        // 1. Pehle space tak file ka naam nikalna
+        while(command[idx] != ' ' && command[idx] != '\0' && f_idx < 31) {
+            filename[f_idx++] = command[idx++];
+        }
+        filename[f_idx] = '\0'; // Naam close kiya
+        
+        if (command[idx] == ' ') idx++; // Space skip karo
+        
+        // 2. Baaki bacha hua pura text file ke andar save kar do
+        create_file(filename, &command[idx]);
+        
+        print_string("App generated successfully! Type 'ls' to view it.\n");
+    }
+    // NAYA: 'rm <filename>' command (Delete file)
+    else if (command[0] == 'r' && command[1] == 'm' && command[2] == ' ') {
+        char* filename = &command[3];
+        int file_index = find_file(filename);
+        if (file_index != -1) {
+            delete_file(filename);
+            print_string("File deleted successfully.\n");
+        } else {
+            print_string("Error: File not found.\n");
+        }
+    }
+    // NAYA: 'append <filename> <content>' command (File me line add karna)
+    else if (command[0] == 'a' && command[1] == 'p' && command[2] == 'p' && command[3] == 'e' && command[4] == 'n' && command[5] == 'd' && command[6] == ' ') {
+        int idx = 7;
+        char filename[32];
+        int f_idx = 0;
+        
+        while(command[idx] != ' ' && command[idx] != '\0' && f_idx < 31) {
+            filename[f_idx++] = command[idx++];
+        }
+        filename[f_idx] = '\0';
+        
+        if (command[idx] == ' ') idx++; 
+        
+        append_file(filename, &command[idx]);
+        print_string("Content appended successfully.\n");
+    }
     // 👆 ------------------------------------ 👆
     else if (command[0] == 'c' && command[1] == 'a' && command[2] == 't' && command[3] == ' ') {
         char* filename = &command[4];
