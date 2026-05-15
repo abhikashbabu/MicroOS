@@ -25,5 +25,12 @@ void get_time(int* hours, int* minutes, int* seconds) {
     *minutes = bcd_to_bin(get_rtc_register(0x02));
     *seconds = bcd_to_bin(get_rtc_register(0x00));
 }
+// CMOS se current Date read karna (Day, Month, Year)
+void get_date(int* day, int* month, int* year) {
+    // 0x07 = Day, 0x08 = Month, 0x09 = Year
+    *day = bcd_to_bin(get_rtc_register(0x07));
+    *month = bcd_to_bin(get_rtc_register(0x08));
+    *year = bcd_to_bin(get_rtc_register(0x09));
+}
 
 #endif

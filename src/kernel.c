@@ -28,8 +28,8 @@ void kernel_main() {
     print_string("\n--- Booting .ind Ecosystem ---\n");
     
     // Hum khud kernel se ek startup script memory mein dal rahe hain
-    create_file("init.ind", "color:11;print:Welcome to Micro OS Ecosystem...;delay:3;color:10;print:Loading Core Services...;delay:3;clear:;");
-    
+// Hum khud kernel se ek startup script memory mein dal rahe hain (Ab Beep ke saath!)
+    create_file("init.ind", "color:11;beep:1500;print:Welcome to Micro OS Ecosystem...;delay:3;color:10;print:Loading Core Services...;delay:3;clear:;");    
     // Ab check karte hain kya script successfully ban gayi
     int boot_script = find_file("init.ind");
     if(boot_script != -1) {

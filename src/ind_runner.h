@@ -3,6 +3,7 @@
 
 #include "display.h"
 #include "fs.h"
+#include "sound.h"  // YEH WALI LINE ADD HUI HAI! 🔊
 
 static inline void execute_ind_app(const char* code) {
     set_color(COLOR_YELLOW, COLOR_BLACK);
@@ -29,7 +30,7 @@ static inline void execute_ind_app(const char* code) {
             i += 6;
             if (code[i] == ';') i++;
         }
-        // NAYA COMMAND: 'color:' (Text ka color badalna)
+        // Command: 'color:'
         else if (code[i] == 'c' && code[i+1] == 'o' && code[i+2] == 'l' && code[i+3] == 'o' && code[i+4] == 'r' && code[i+5] == ':') {
             i += 6;
             int col = 0;
@@ -37,11 +38,10 @@ static inline void execute_ind_app(const char* code) {
                 col = (col * 10) + (code[i] - '0');
                 i++;
             }
-            // Background black rakhenge, text color user wala hoga
             set_color((unsigned char)col, COLOR_BLACK);
             if (code[i] == ';') i++;
         }
-        // NAYA COMMAND: 'delay:' (Loop lagakar animation banana)
+        // Command: 'delay:'
         else if (code[i] == 'd' && code[i+1] == 'e' && code[i+2] == 'l' && code[i+3] == 'a' && code[i+4] == 'y' && code[i+5] == ':') {
             i += 6;
             int count = 0;
@@ -49,8 +49,23 @@ static inline void execute_ind_app(const char* code) {
                 count = (count * 10) + (code[i] - '0');
                 i++;
             }
-            // CPU ko wait karwane ke liye ek dummy loop (Volatile zaroori hai taaki compiler ise delete na kare)
             for(volatile int d = 0; d < count * 20000000; d++) { }
+            if (code[i] == ';') i++;
+        }
+        // NAYA COMMAND: 'beep:'
+        else if (code[i] == 'b' && code[i+1] == 'e' && code[i+2] == 'e' && code[i+3] == 'p' && code[i+4] == ':') {
+            i += 5;
+            int freq = 0;
+            while(code[i] >= '0' && code[i] <= '9') {
+                freq = (freq * 10) + (code[i] - '0');
+                i++;
+            }
+            if(freq > 0) {
+                play_sound(freq);
+                // CPU ko thodi der rukne do taaki beep sunayi de
+                for(volatile int d = 0; d < 40000000; d++) { } 
+                stop_sound();
+            }
             if (code[i] == ';') i++;
         }
         else {

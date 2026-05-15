@@ -125,6 +125,26 @@ void execute_command(char* command) {
         append_file(filename, &command[idx]);
         print_string("Content appended successfully.\n");
     }
+    // NAYA: 'date' command
+    else if (strcmp(command, "date") == 0) {
+        int d, m, y;
+        get_date(&d, &m, &y);
+        char buffer[10];
+        
+        print_string("Current Date: ");
+        if (d < 10) print_char('0');
+        itoa(d, buffer); print_string(buffer);
+        print_char('/');
+        
+        if (m < 10) print_char('0');
+        itoa(m, buffer); print_string(buffer);
+        print_char('/');
+        
+        print_string("20"); // 2000s Century
+        if (y < 10) print_char('0');
+        itoa(y, buffer); print_string(buffer);
+        print_string("\n");
+    }
     // 👆 ------------------------------------ 👆
     else if (command[0] == 'c' && command[1] == 'a' && command[2] == 't' && command[3] == ' ') {
         char* filename = &command[4];
