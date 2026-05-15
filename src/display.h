@@ -26,5 +26,7 @@ void clear_screen();
 void scroll_screen();
 void print_string(const char* str);
 void print_char(char c);
+// NAYA: Window draw karne ka function
+void draw_window(int start_x, int start_y, int width, int height, const char* title, unsigned char bg_color);
 
 #endif
