@@ -1,33 +1,44 @@
 #include "display.h"
 #include "keyboard.h"
 #include "fs.h"
-#include "gdt.h" // NAYA
-#include "idt.h" // NAYA
+#include "gdt.h" 
+#include "idt.h" 
+#include "pic.h"        // NAYA: Day 17
+#include "ind_runner.h" // NAYA: Day 18 ke liye zaroori hai
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);
     clear_screen();
-    
     draw_top_bar(" Micro OS v0.1 | .ind Application Runtime");
     
-    // Day 15: GDT Setup
+    // System Tables Init
     init_gdt();
-    print_string("[OK] GDT Initialized (Memory Protected)\n");
+    print_string("[OK] GDT Initialized\n");
     
-    // Day 16: IDT Setup
     init_idt();
-    print_string("[OK] IDT Initialized (Interrupts Enabled)\n");
+    print_string("[OK] IDT Initialized\n");
     
-    set_color(COLOR_LIGHT_GREEN, COLOR_BLACK);
-    print_string("[OK] Kernel Loaded Successfully\n");
+    init_pic(); // DAY 17: PIC yahan start ho raha hai
+    print_string("[OK] PIC Hardware Remapped\n");
     
     init_fs();
     print_string("[OK] Virtual File System Mounted\n");
     
-    print_string("[OK] Shell Environment Ready\n\n");
+    // DAY 18: The Auto-Exec Script Logic
+    print_string("\n--- Booting .ind Ecosystem ---\n");
     
+    // Hum khud kernel se ek startup script memory mein dal rahe hain
+    create_file("init.ind", "color:11;print:Welcome to Micro OS Ecosystem...;delay:3;color:10;print:Loading Core Services...;delay:3;clear:;");
+    
+    // Ab check karte hain kya script successfully ban gayi
+    int boot_script = find_file("init.ind");
+    if(boot_script != -1) {
+        execute_ind_app(file_system[boot_script].content); // Auto-run!
+    }
+    
+    // Script khatam hone ke baad normal shell start karo
     set_color(COLOR_WHITE, COLOR_BLACK);
-    print_string("Welcome to Micro OS! Build your .ind ecosystem.\n\n");
+    print_string("Micro OS CLI Ready. Type 'help' to start.\n\n");
     
     keyboard_read_loop();
 }
