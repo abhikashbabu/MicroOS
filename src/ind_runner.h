@@ -5,13 +5,18 @@
 #include "fs.h"
 #include "sound.h"  // YEH WALI LINE ADD HUI HAI! 🔊
 
+extern void itoa(int n, char s[]); // String convertor link karne ke liye
+
 static inline void execute_ind_app(const char* code) {
     set_color(COLOR_YELLOW, COLOR_BLACK);
     print_string("--- Running .ind App ---\n");
 
+    int vars[26] = {0}; // NAYA: A se Z tak 26 variables store karne ke liye dabba
     int i = 0;
+    
     while (code[i] != '\0') {
-        while(code[i] == ' ' || code[i] == '\n') i++;
+        // Spaces aur Newlines ko skip karo
+        while(code[i] == ' ' || code[i] == '\n' || code[i] == '\r') i++;
         if (code[i] == '\0') break;
 
         // Command: 'print:'
@@ -41,23 +46,17 @@ static inline void execute_ind_app(const char* code) {
             set_color((unsigned char)col, COLOR_BLACK);
             if (code[i] == ';') i++;
         }
-        // NAYA COMMAND: 'window:' (Draw a GUI Window!)
+        // COMMAND: 'window:' (Draw a GUI Window!)
         else if (code[i] == 'w' && code[i+1] == 'i' && code[i+2] == 'n' && code[i+3] == 'd' && code[i+4] == 'o' && code[i+5] == 'w' && code[i+6] == ':') {
             i += 7;
             char title[30];
             int t_idx = 0;
-            // Title extract karo
             while(code[i] != ';' && code[i] != '\0' && t_idx < 29) {
                 title[t_idx++] = code[i++];
             }
             title[t_idx] = '\0';
-            
-            // Ek pop-up window draw karo (Centered, Blue background ke sath)
             draw_window(10, 5, 60, 15, title, COLOR_BLUE);
-            
-            // Ab iske baad aane wala text directly Blue window ke andar print hoga!
             set_color(COLOR_WHITE, COLOR_BLUE); 
-            
             if (code[i] == ';') i++;
         }
         // Command: 'delay:'
@@ -71,7 +70,7 @@ static inline void execute_ind_app(const char* code) {
             for(volatile int d = 0; d < count * 20000000; d++) { }
             if (code[i] == ';') i++;
         }
-        // NAYA COMMAND: 'beep:'
+        // COMMAND: 'beep:'
         else if (code[i] == 'b' && code[i+1] == 'e' && code[i+2] == 'e' && code[i+3] == 'p' && code[i+4] == ':') {
             i += 5;
             int freq = 0;
@@ -81,16 +80,60 @@ static inline void execute_ind_app(const char* code) {
             }
             if(freq > 0) {
                 play_sound(freq);
-                // CPU ko thodi der rukne do taaki beep sunayi de
                 for(volatile int d = 0; d < 40000000; d++) { } 
                 stop_sound();
             }
             if (code[i] == ';') i++;
         }
+        // ROBUST COMMAND: 'var <char> <value>;'
+        else if (code[i] == 'v' && code[i+1] == 'a' && code[i+2] == 'r' && code[i+3] == ' ') {
+            i += 4;
+            while(code[i] == ' ') i++; 
+            char v_name = code[i];
+            i++;
+            while(code[i] == ' ') i++; 
+            int val = 0;
+            while(code[i] >= '0' && code[i] <= '9') { val = (val * 10) + (code[i] - '0'); i++; }
+            if (v_name >= 'a' && v_name <= 'z') vars[v_name - 'a'] = val;
+            while(code[i] == ' ') i++; 
+            if (code[i] == ';') i++;
+        }
+        // ROBUST COMMAND: 'add <char> <value>;'
+        else if (code[i] == 'a' && code[i+1] == 'd' && code[i+2] == 'd' && code[i+3] == ' ') {
+            i += 4;
+            while(code[i] == ' ') i++;
+            char v_name = code[i];
+            i++;
+            while(code[i] == ' ') i++;
+            int val = 0;
+            while(code[i] >= '0' && code[i] <= '9') { val = (val * 10) + (code[i] - '0'); i++; }
+            if (v_name >= 'a' && v_name <= 'z') vars[v_name - 'a'] += val;
+            while(code[i] == ' ') i++;
+            if (code[i] == ';') i++;
+        }
+        // ROBUST COMMAND: 'printvar <char>;'
+        else if (code[i] == 'p' && code[i+1] == 'r' && code[i+2] == 'i' && code[i+3] == 'n' && code[i+4] == 't' && code[i+5] == 'v' && code[i+6] == 'a' && code[i+7] == 'r' && code[i+8] == ' ') {
+            i += 9;
+            while(code[i] == ' ') i++;
+            char v_name = code[i];
+            i++;
+            if (v_name >= 'a' && v_name <= 'z') {
+                char buf[16];
+                itoa(vars[v_name - 'a'], buf);
+                print_string(buf);
+                print_char('\n');
+            }
+            while(code[i] == ' ') i++;
+            if (code[i] == ';') i++;
+        }
+        // NAYA SAFE ERROR HANDLER
         else {
+            // Error print karega lekin app crash nahi karega. Agle command par jump kar jayega.
             set_color(COLOR_LIGHT_RED, COLOR_BLACK);
-            print_string("[Error] Unknown syntax inside .ind app!\n");
-            break; 
+            print_string("[Warning] Skipping unknown syntax!\n");
+            while(code[i] != ';' && code[i] != '\0') i++; // Semicolon tak aage badho
+            if (code[i] == ';') i++;
+            set_color(COLOR_WHITE, COLOR_BLUE); // Wapas window color set karo
         }
     }
 
