@@ -5,6 +5,7 @@
 #include "idt.h" 
 #include "pic.h"        // NAYA: Day 17
 #include "ind_runner.h" // NAYA: Day 18 ke liye zaroori hai
+#include "mouse.h"      // NAYA
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);
@@ -27,6 +28,11 @@ void kernel_main() {
     // DAY 18: The Auto-Exec Script Logic
     print_string("\n--- Booting .ind Ecosystem ---\n");
     
+    init_mouse();       // NAYA: Mouse Start kiya
+    print_string("[OK] PS/2 Mouse Activated\n");
+
+    // NAYA: Ye line CPU ko bolti hai ki ab Interrupts sun-na shuru karo!
+    __asm__ volatile ("sti");
     // Hum khud kernel se ek startup script memory mein dal rahe hain
 // Hum khud kernel se ek startup script memory mein dal rahe hain (Ab Beep ke saath!)
     create_file("init.ind", "color:11;beep:1500;print:Welcome to Micro OS Ecosystem...;delay:3;color:10;print:Loading Core Services...;delay:3;clear:;");    
