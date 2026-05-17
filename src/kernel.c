@@ -8,6 +8,7 @@
 #include "mouse.h"      // NAYA
 #include "paging.h" // NAYA (Day 31)
 #include "memory.h" // NAYA (Day 32)
+#include "task.h"   // NAYA: Task Manager include kiya
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);
@@ -23,8 +24,13 @@ void kernel_main() {
     init_paging();
     print_string("[OK] Memory Paging Enabled (4KB Pages)\n");
 
+     // NAYA: Task Manager start karo
+    init_task_manager();
+    print_string("[OK] Task Manager Initialized\n");
+
     init_idt();
     print_string("[OK] IDT Initialized\n");
+    
     
     init_pic(); // DAY 17: PIC yahan start ho raha hai
     print_string("[OK] PIC Hardware Remapped\n");

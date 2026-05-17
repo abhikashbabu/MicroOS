@@ -8,7 +8,7 @@
 #include "ind_runner.h"  // NAYA
 #include "editor.h"      // NAYA
 #include "pci.h"         // NAYA
-
+#include "task.h"        // NAYA
 
 void execute_command(char* command) {
     if (command[0] == '\0') return;
@@ -30,7 +30,9 @@ void execute_command(char* command) {
         print_string("  create   - Create a file (e.g., create note.txt This is a note)\n"); // HELP ME BHI ADD KIYA
         print_string("  rm       - Delete a file (e.g., rm note.txt)\n"); // HELP ME BHI ADD KIYA
         print_string("  pci      - Scan PCI Hardware\n"); // HELP ME BHI ADD    KIYA
-        print_string("  matrix   - The Matrix Screensaver\n"); // HELP ME BHI ADD KIYA      
+        print_string("  matrix   - The Matrix Screensaver\n"); // HELP ME BHI ADD KIYA 
+        print_string("  top      - Show running tasks\n"); // HELP ME BHI ADD KIYA
+             
 
 
 
@@ -75,6 +77,43 @@ void execute_command(char* command) {
         print_string(" Bytes\n");
         
         kmalloc(10); 
+    }
+    // NAYA: 'top' command (Task Manager)
+    else if (strcmp(command, "top") == 0) {
+        draw_window(15, 3, 50, 12, "Task Manager", COLOR_MAGENTA);
+        set_color(COLOR_WHITE, COLOR_MAGENTA);
+        
+        cursor_x = 17; cursor_y = 5; update_cursor(cursor_x, cursor_y);
+        print_string("PID   | Task Name           | Memory");
+        cursor_x = 17; cursor_y = 6; update_cursor(cursor_x, cursor_y);
+        print_string("--------------------------------------");
+        
+        for(int i = 0; i < current_task_count; i++) {
+            if(task_list[i].is_active) {
+                cursor_x = 17; cursor_y = 7 + i; update_cursor(cursor_x, cursor_y);
+                
+                // PID
+                char id_buf[5]; itoa(task_list[i].id, id_buf);
+                print_string(id_buf); print_string("     | ");
+                
+                // Task Name
+                print_string(task_list[i].name);
+                
+                // Name alignment ke liye extra spaces
+                int len = 0; while(task_list[i].name[len] != '\0') len++;
+                for(int s = 0; s < (20 - len); s++) print_char(' ');
+                
+                print_string("| ");
+                
+                // Memory
+                char mem_buf[10]; itoa(task_list[i].memory_used, mem_buf);
+                print_string(mem_buf); print_string(" Bytes");
+            }
+        }
+        
+        // Output dikhane ke baad wapas normal terminal position set karna
+        cursor_x = 0; cursor_y = 21; update_cursor(cursor_x, cursor_y);
+        set_color(COLOR_WHITE, COLOR_BLACK);
     }
    else if (strcmp(command, "ls") == 0) { 
         print_string("Name                  Size (Bytes)\n");
