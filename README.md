@@ -1,5 +1,5 @@
 # 🖥️ Micro OS
-### 🇮🇳 First Indian Independent OS Developed by Abhikash Babu
+### 🇮🇳 A Next-Generation Independent Operating System 
 **Lightweight. Fast. Yours.**
 Micro OS is an experimental, open-source, lightweight operating system built for Intel (x86/x64) architectures. Our ultimate goal is to create a seamless, fast desktop experience featuring a unique `.ind` application ecosystem running on a custom JavaScript runtime.
 
