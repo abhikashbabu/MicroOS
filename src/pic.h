@@ -26,10 +26,11 @@ void init_pic() {
     outb(PIC1_DATA, 0x01);
     outb(PIC2_DATA, 0x01);
 
-    // 5. MASKING (IMPORTANT): 
-    // Abhi humne keyboard ka actual Interrupt Handler nahi likha hai, 
-    // isliye abhi sabhi interrupts ko "Block" (0xFF) kar rahe hain taaki OS crash na ho.
-    outb(PIC1_DATA, 0xFF);
+  
+
+    // 5. MASKING (Update)
+    // 0xFE ka matlab hai: Sirf bit 0 (Timer) ko allow karo, baaki sab mask rakho.
+    outb(PIC1_DATA, 0xFE); 
     outb(PIC2_DATA, 0xFF);
 }
 

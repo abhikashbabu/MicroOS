@@ -1,6 +1,6 @@
 #ifndef IDT_H
 #define IDT_H
-
+#include "timer.h" // YEH LINE ADD KARO
 #include "io.h"
 
 struct idt_entry {
@@ -35,6 +35,9 @@ void init_idt() {
         idt_set_gate(i, 0, 0, 0);
     }
 
+    // Entry 32 is IRQ0 (The Hardware Timer)
+    idt_set_gate(32, (unsigned long)timer_handler, 0x08, 0x8E);
+    
     __asm__ __volatile__("lidt %0" : : "m" (idtp));
 }
 
