@@ -6,6 +6,8 @@
 #include "pic.h"        // NAYA: Day 17
 #include "ind_runner.h" // NAYA: Day 18 ke liye zaroori hai
 #include "mouse.h"      // NAYA
+#include "paging.h" // NAYA (Day 31)
+#include "memory.h" // NAYA (Day 32)
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);
@@ -16,6 +18,11 @@ void kernel_main() {
     init_gdt();
     print_string("[OK] GDT Initialized\n");
     
+
+    // NAYA: Enable Virtual Memory
+    init_paging();
+    print_string("[OK] Memory Paging Enabled (4KB Pages)\n");
+
     init_idt();
     print_string("[OK] IDT Initialized\n");
     
