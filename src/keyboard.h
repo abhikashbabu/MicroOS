@@ -29,27 +29,28 @@ int shift_pressed = 0; // NAYA: OS ko yaad rahega ki Shift daba hai ya nahi
 
 void keyboard_read_loop() {
     unsigned char scancode;
+    unsigned char status;
     
     print_string("MicroOS> ");
 
     while(1) {
-        if (inb(0x64) & 1) {
+        status = inb(0x64);
+        
+        // NAYA LOGIC: Bit 0 (Data ready hai) AND Bit 5 '0' hona chahiye (Mouse nahi hai)
+        if ((status & 1) && !(status & 0x20)) { 
             scancode = inb(0x60);
 
-            // Left Shift (0x2A) ya Right Shift (0x36) dabaya gaya
             if (scancode == 0x2A || scancode == 0x36) {
                 shift_pressed = 1;
-                continue; // Loop aage badhao, char print mat karo
+                continue; 
             }
-            // Left Shift (0xAA) ya Right Shift (0xB6) chhod diya gaya
             if (scancode == 0xAA || scancode == 0xB6) {
                 shift_pressed = 0;
                 continue;
             }
 
-            if (!(scancode & 0x80)) { // Key press
+            if (!(scancode & 0x80)) { 
                 char c;
-                // Agar shift pressed hai toh shifted array se lo, warna normal array se
                 if (shift_pressed == 1) {
                     c = keyboard_map_shifted[scancode];
                 } else {
@@ -60,7 +61,6 @@ void keyboard_read_loop() {
                     print_char('\n');
                     command_buffer[buffer_index] = '\0';
                     execute_command(command_buffer);
-                    
                     buffer_index = 0;
                     print_string("MicroOS> ");
                 } 
@@ -78,6 +78,10 @@ void keyboard_read_loop() {
                     }
                 }
             }
+        }
+        // Agar data Mouse ka tha (Bit 5 is 1), toh bas read karke buffer khali kar do taaki hang na ho
+        else if (status & 0x20) {
+            inb(0x60); // Read and throw away mouse data for now
         }
     }
 }

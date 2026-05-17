@@ -17,4 +17,5 @@ ld -m elf_i386 -T linker.ld -z noexecstack -o myos.bin boot.o display.o shell.o 
 echo "Build complete! Running in QEMU..."
 
 # Run Emulator
-qemu-system-i386 -kernel myos.bin
+# Run Emulator with Hard Drive (10MB hdd.img)
+qemu-system-i386 -kernel myos.bin -drive format=raw,file=hdd.img,if=ide
