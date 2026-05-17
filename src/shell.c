@@ -6,6 +6,7 @@
 #include "memory.h"  // NAYA: Memory manager include kiya
 #include "fs.h"          // NAYA
 #include "ind_runner.h"  // NAYA
+#include "editor.h"      // NAYA
 
 void execute_command(char* command) {
     if (command[0] == '\0') return;
@@ -22,6 +23,9 @@ void execute_command(char* command) {
         print_string("  ls      - List all files\n");               // HELP ME BHI ADD KIYA
         print_string("  cat     - Read file (e.g., cat readme.txt)\n"); // HELP ME BHI ADD KIYA
         print_string("  run     - Run .ind app (e.g., run hello.ind)\n"); // HELP ME BHI ADD KIYA
+        print_string("  edit    - Edit a file (e.g., edit readme.txt)\n"); // HELP ME BHI ADD KIYA
+        print_string("  explorer - Browse files\n"); // HELP ME BHI ADD KIYA
+
     } 
     else if (strcmp(command, "clear") == 0) {
         clear_screen();
@@ -144,6 +148,37 @@ void execute_command(char* command) {
         if (y < 10) print_char('0');
         itoa(y, buffer); print_string(buffer);
         print_string("\n");
+    }
+    // NAYA: Visual File Explorer
+    else if (strcmp(command, "explorer") == 0) {
+        draw_window(10, 4, 60, 16, "Micro Explorer - Files", COLOR_CYAN);
+        set_color(COLOR_BLACK, COLOR_CYAN);
+        
+        int start_y = 6;
+        for(int j = 0; j < file_count; j++) {
+            cursor_x = 13; cursor_y = start_y + j; update_cursor(cursor_x, cursor_y);
+            print_string("-> ");
+            print_string(file_system[j].name);
+            print_string(" (");
+            char sb[10]; itoa(file_system[j].size, sb); print_string(sb);
+            print_string(" bytes)");
+        }
+        
+        // Wapas normal color set karo shell ke liye
+        cursor_x = 0; cursor_y = 21; update_cursor(cursor_x, cursor_y);
+        set_color(COLOR_WHITE, COLOR_BLACK);
+    }
+    // NAYA: Live Code Editor
+    else if (command[0] == 'e' && command[1] == 'd' && command[2] == 'i' && command[3] == 't' && command[4] == ' ') {
+        char filename[32];
+        int i = 5, j = 0;
+        while (command[i] != '\0' && j < 31) {
+            filename[j++] = command[i++];
+        }
+        filename[j] = '\0';
+        
+        // Editor start karo
+        run_editor(filename);
     }
     // 👆 ------------------------------------ 👆
     else if (command[0] == 'c' && command[1] == 'a' && command[2] == 't' && command[3] == ' ') {
