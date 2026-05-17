@@ -7,6 +7,8 @@
 #include "fs.h"          // NAYA
 #include "ind_runner.h"  // NAYA
 #include "editor.h"      // NAYA
+#include "pci.h"         // NAYA
+
 
 void execute_command(char* command) {
     if (command[0] == '\0') return;
@@ -25,6 +27,12 @@ void execute_command(char* command) {
         print_string("  run     - Run .ind app (e.g., run hello.ind)\n"); // HELP ME BHI ADD KIYA
         print_string("  edit    - Edit a file (e.g., edit readme.txt)\n"); // HELP ME BHI ADD KIYA
         print_string("  explorer - Browse files\n"); // HELP ME BHI ADD KIYA
+        print_string("  create   - Create a file (e.g., create note.txt This is a note)\n"); // HELP ME BHI ADD KIYA
+        print_string("  rm       - Delete a file (e.g., rm note.txt)\n"); // HELP ME BHI ADD KIYA
+        print_string("  pci      - Scan PCI Hardware\n"); // HELP ME BHI ADD    KIYA
+        print_string("  matrix   - The Matrix Screensaver\n"); // HELP ME BHI ADD KIYA      
+
+
 
     } 
     else if (strcmp(command, "clear") == 0) {
@@ -112,6 +120,33 @@ void execute_command(char* command) {
         } else {
             print_string("Error: File not found.\n");
         }
+    }
+    // NAYA (Day 29): PCI Hardware Scanner
+    else if (strcmp(command, "pci") == 0) {
+        scan_pci_bus();
+    }
+    // NAYA (Day 30): The Matrix Screensaver
+    else if (strcmp(command, "matrix") == 0) {
+        clear_screen();
+        set_color(COLOR_LIGHT_GREEN, COLOR_BLACK);
+        
+        // Digital rain animation loop
+        for(int m = 0; m < 500; m++) {
+            for(int n = 0; n < 80; n++) {
+                if((m + n) % 7 == 0 || (m * n) % 13 == 0) {
+                    print_char('0' + (m + n) % 2); // Random 0 or 1
+                } else {
+                    print_char(' ');
+                }
+            }
+            // Delay taaki animation fast na bhage
+            for(volatile int d = 0; d < 8000000; d++){} 
+        }
+        
+        // Screensaver khatam hone par sab normal kardo
+        set_color(COLOR_WHITE, COLOR_BLACK);
+        clear_screen();
+        draw_top_bar(" Micro OS v0.1 | .ind Application Runtime");
     }
     // NAYA: 'append <filename> <content>' command (File me line add karna)
     else if (command[0] == 'a' && command[1] == 'p' && command[2] == 'p' && command[3] == 'e' && command[4] == 'n' && command[5] == 'd' && command[6] == ' ') {
