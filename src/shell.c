@@ -48,6 +48,77 @@ void execute_command(char* command) {
         print_string("Built for the .ind ecosystem.\n");
         print_string("Developer: Abhikash\n");
     } 
+
+    // NAYA (DAY 45/46): Interactive GUI & Click Engine (Stabilized Mouse)
+    else if (strcmp(command, "gui") == 0) {
+        init_vga_graphics(); 
+        
+        draw_desktop_test();
+        draw_mouse_pointer(mouse_x, mouse_y);
+        
+        int gui_running = 1;
+        
+        while(gui_running) {
+            unsigned char k_status = inb(0x64);
+            
+            if (k_status & 1) { 
+                
+                if (!(k_status & 0x20)) { 
+                    // Keyboard Data
+                    unsigned char scancode = inb(0x60); 
+                    if (scancode == 0x01) {
+                        outb(0x64, 0xFE); // ESC dabane par Reboot
+                    }
+                } 
+                else { 
+                    // FIX 1: 'unsigned char' use karna hai negative math theek karne ke liye
+                    unsigned char mouse_bytes[3];
+                    mouse_bytes[0] = inb(0x60);
+                    
+                    // FIX 2: Hardware Sync Check! 
+                    // PS/2 mouse packet ka pehla byte hamesha 'bit 3' set rakhta hai.
+                    // Agar ye bit 0 hai, toh iska matlab data aage-peeche ho gaya hai, isko ignore karo!
+                    if (!(mouse_bytes[0] & 0x08)) continue; 
+
+                    mouse_wait(0); mouse_bytes[1] = inb(0x60);
+                    mouse_wait(0); mouse_bytes[2] = inb(0x60);
+
+                    // Movement Math (Ab ekdum accurate calculate hoga)
+                    int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100);
+                    int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
+                    
+                    int left_click = mouse_bytes[0] & 1;
+
+                    mouse_x += (rel_x / 2); // Mouse sensitivity control
+                    mouse_y -= (rel_y / 2);
+
+                    // Screen boundaries (Cursor ko screen ke andar lock karna)
+                    if (mouse_x < 0) mouse_x = 0;
+                    if (mouse_x > 313) mouse_x = 313;
+                    if (mouse_y < 0) mouse_y = 0;
+                    if (mouse_y > 193) mouse_y = 193;
+
+                    draw_desktop_test();
+
+                    // CLICK LOGIC
+                    if (left_click) {
+                        // Start Button
+                        if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
+                            draw_rect(2, 182, 30, 16, 14); 
+                        }
+                        
+                        // Close Button (Red)
+                        if (mouse_x >= 235 && mouse_x <= 247 && mouse_y >= 42 && mouse_y <= 53) {
+                            draw_rect(50, 40, 200, 100, 1); 
+                        }
+                    }
+
+                    draw_mouse_pointer(mouse_x, mouse_y);
+                }
+            }
+        }
+    }
+
     else if (strcmp(command, "time") == 0) {
         int h, m, s;
         get_time(&h, &m, &s);
