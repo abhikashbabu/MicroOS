@@ -10,7 +10,8 @@
 #include "pci.h"         // NAYA
 #include "task.h"        // NAYA
 #include "mouse.h"
-
+#include "vga.h"
+#include "graphics.h"
 void execute_command(char* command) {
     if (command[0] == '\0') return;
     
@@ -62,7 +63,17 @@ void execute_command(char* command) {
         itoa(s, buffer); print_string(buffer);
         print_string("\n");
     }
+// NAYA (DAY 43/44): Enter Graphics Mode
+    else if (strcmp(command, "gui") == 0) {
+        init_vga_graphics(); // Hardware ko Graphics mode mein daalo
+        draw_desktop_test(); // Apni fake Windows draw karo!
 
+        // Warning: Text mode wapas lane ke liye reboot karna padega
+        // Abhi ke liye hum ise endless loop mein daal dete hain
+        while(1) {
+            // Future mein hum mouse coordinate update yahan karenge!
+        }
+    }
 
     // NAYA (DAY 42): Mouse hardware test
     else if (strcmp(command, "mousetest") == 0) {
