@@ -49,76 +49,88 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 
-    // NAYA (DAY 45/46): Interactive GUI & Click Engine (Stabilized Mouse)
+    // NAYA (DAY 47/48): Smart Redraw & Micro-Paint App
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
+        // Desktop ab bas EK baar draw hoga!
         draw_desktop_test();
+        
+        // NAYA: Purane coordinates track karna
+        int old_mouse_x = mouse_x;
+        int old_mouse_y = mouse_y;
+        
+        // Pehli baar cursor draw karne se pehle background save kar lo
+        save_mouse_bg(mouse_x, mouse_y);
         draw_mouse_pointer(mouse_x, mouse_y);
         
         int gui_running = 1;
+        int window_open = 1;
         
         while(gui_running) {
             unsigned char k_status = inb(0x64);
             
             if (k_status & 1) { 
-                
                 if (!(k_status & 0x20)) { 
-                    // Keyboard Data
                     unsigned char scancode = inb(0x60); 
-                    if (scancode == 0x01) {
-                        outb(0x64, 0xFE); // ESC dabane par Reboot
-                    }
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC for Reboot
                 } 
                 else { 
-                    // FIX 1: 'unsigned char' use karna hai negative math theek karne ke liye
                     unsigned char mouse_bytes[3];
                     mouse_bytes[0] = inb(0x60);
-                    
-                    // FIX 2: Hardware Sync Check! 
-                    // PS/2 mouse packet ka pehla byte hamesha 'bit 3' set rakhta hai.
-                    // Agar ye bit 0 hai, toh iska matlab data aage-peeche ho gaya hai, isko ignore karo!
-                    if (!(mouse_bytes[0] & 0x08)) continue; 
+                    if (!(mouse_bytes[0] & 0x08)) continue; // Hardware Sync
 
                     mouse_wait(0); mouse_bytes[1] = inb(0x60);
                     mouse_wait(0); mouse_bytes[2] = inb(0x60);
 
-                    // Movement Math (Ab ekdum accurate calculate hoga)
                     int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100);
                     int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
-                    
                     int left_click = mouse_bytes[0] & 1;
 
-                    mouse_x += (rel_x / 2); // Mouse sensitivity control
+                    // STEP 1: Purane cursor ko hatakar original background wapas lana
+                    restore_mouse_bg(old_mouse_x, old_mouse_y);
+
+                    mouse_x += (rel_x / 2);
                     mouse_y -= (rel_y / 2);
 
-                    // Screen boundaries (Cursor ko screen ke andar lock karna)
                     if (mouse_x < 0) mouse_x = 0;
                     if (mouse_x > 313) mouse_x = 313;
                     if (mouse_y < 0) mouse_y = 0;
                     if (mouse_y > 193) mouse_y = 193;
 
-                    draw_desktop_test();
-
-                    // CLICK LOGIC
+                    // STEP 2: LOGIC & DRAWING (Ab screen mitaani nahi padegi!)
                     if (left_click) {
-                        // Start Button
-                        if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
-                            draw_rect(2, 182, 30, 16, 14); 
+                        
+                        // NAYA (DAY 48): MICRO-PAINT DRAWING 
+                        // Check if cursor is inside the Canvas (x: 52-246, y: 57-155)
+                        if (window_open && mouse_x >= 52 && mouse_x <= 246 && mouse_y >= 57 && mouse_y <= 155) {
+                            // Draw a Black 3x3 Brush pixel directly on the screen!
+                            draw_rect(mouse_x, mouse_y, 3, 3, 0); 
                         }
                         
-                        // Close Button (Red)
-                        if (mouse_x >= 235 && mouse_x <= 247 && mouse_y >= 42 && mouse_y <= 53) {
-                            draw_rect(50, 40, 200, 100, 1); 
+                        // Start Button Click
+                        if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
+                            draw_rect(2, 182, 30, 16, 14); // Yellow
+                        }
+                        
+                        // Close Button Click
+                        if (window_open && mouse_x >= 235 && mouse_x <= 247 && mouse_y >= 42 && mouse_y <= 53) {
+                            draw_rect(50, 40, 200, 120, 1); // Window ko Blue paint se mita do
+                            window_open = 0;
                         }
                     }
 
+                    // Update coordinates for next frame
+                    old_mouse_x = mouse_x;
+                    old_mouse_y = mouse_y;
+
+                    // STEP 3: Nayi jagah ka background save karna, phir Mouse draw karna
+                    save_mouse_bg(mouse_x, mouse_y);
                     draw_mouse_pointer(mouse_x, mouse_y);
                 }
             }
         }
     }
-
     else if (strcmp(command, "time") == 0) {
         int h, m, s;
         get_time(&h, &m, &s);
