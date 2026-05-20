@@ -52,8 +52,8 @@ void kernel_main() {
     // Ab check karte hain kya script successfully ban gayi
     int boot_script = find_file("init.ind");
     if(boot_script != -1) {
-        execute_ind_app(file_system[boot_script].content); // Auto-run!
-    }
+// NAYA: Auto-run ke time bhi teeno parameters bhejne honge
+        execute_ind_app(file_system[boot_script].name, file_system[boot_script].content, file_system[boot_script].size);    }
     
     // Script khatam hone ke baad normal shell start karo
     set_color(COLOR_WHITE, COLOR_BLACK);

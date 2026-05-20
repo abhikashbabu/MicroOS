@@ -115,6 +115,37 @@ void execute_command(char* command) {
         cursor_x = 0; cursor_y = 21; update_cursor(cursor_x, cursor_y);
         set_color(COLOR_WHITE, COLOR_BLACK);
     }
+    else if (command[0] == 'r' && command[1] == 'u' && command[2] == 'n' && command[3] == ' ') {
+        char* filename = &command[4];
+        int file_index = find_file(filename);
+        if (file_index != -1) {
+            // NAYA: Ab file ka naam, uska code, aur uska size teeno engine ko bhej rahe hain
+            execute_ind_app(filename, file_system[file_index].content, file_system[file_index].size);
+        } else {
+            print_string("App not found.\n");
+        }
+    }
+    // NAYA: 'kill <pid>' command
+    else if (command[0] == 'k' && command[1] == 'i' && command[2] == 'l' && command[3] == 'l' && command[4] == ' ') {
+        int target_pid = 0;
+        int idx = 5;
+        // PID number padhna
+        while(command[idx] >= '0' && command[idx] <= '9') {
+            target_pid = (target_pid * 10) + (command[idx] - '0');
+            idx++;
+        }
+        
+        if(target_pid == 0 || target_pid == 1) {
+            print_string("[Error] Cannot kill System Kernel or Shell!\n");
+        } else if(target_pid >= current_task_count || task_list[target_pid].is_active == 0) {
+            print_string("[Error] Invalid PID or Task already dead.\n");
+        } else {
+            end_task(target_pid);
+            print_string("[OK] Task PID ");
+            char kbuf[5]; itoa(target_pid, kbuf); print_string(kbuf);
+            print_string(" terminated successfully.\n");
+        }
+    }
    else if (strcmp(command, "ls") == 0) { 
         print_string("Name                  Size (Bytes)\n");
         print_string("----------------------------------\n");
@@ -265,11 +296,12 @@ void execute_command(char* command) {
             print_string("File not found.\n");
         }
     }
-    else if (command[0] == 'r' && command[1] == 'u' && command[2] == 'n' && command[3] == ' ') {
+   else if (command[0] == 'r' && command[1] == 'u' && command[2] == 'n' && command[3] == ' ') {
         char* filename = &command[4];
         int file_index = find_file(filename);
         if (file_index != -1) {
-            execute_ind_app(file_system[file_index].content);
+            // NAYA: Ab hum teeno cheezein bhej rahe hain (Name, Content, aur Size)
+            execute_ind_app(filename, file_system[file_index].content, file_system[file_index].size);
         } else {
             print_string("App not found.\n");
         }

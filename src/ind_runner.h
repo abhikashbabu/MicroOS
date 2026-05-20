@@ -4,15 +4,26 @@
 #include "display.h"
 #include "fs.h"
 #include "sound.h"  // YEH WALI LINE ADD HUI HAI! 🔊
-
+#include "task.h"   // NAYA: Task Manager include kiya
 extern void itoa(int n, char s[]); // String convertor link karne ke liye
 
-static inline void execute_ind_app(const char* code) {
-    set_color(COLOR_YELLOW, COLOR_BLACK);
-    print_string("--- Running .ind App ---\n");
+// FIX 1: Function signature ko 3 parameters wala banaya
+static inline void execute_ind_app(char* filename, const char* code, unsigned int app_size) {
+    
+    // FIX 2: App ko Task Manager mein register karo aur PID lo
+    int pid = create_task(filename, app_size);
 
-    int vars[26] = {0}; // NAYA: A se Z tak 26 variables store karne ke liye dabba
+    set_color(COLOR_YELLOW, COLOR_BLACK);
+    print_string("--- Running .ind App (PID: ");
+    char pid_buf[5]; itoa(pid, pid_buf); print_string(pid_buf);
+    print_string(") ---\n");
+
+    // FIX 3: Clean variables allocation (No duplicate definitions!)
+    int vars[26] = {0}; 
     int i = 0;
+
+
+
     
     while (code[i] != '\0') {
         // Spaces aur Newlines ko skip karo
@@ -140,6 +151,9 @@ static inline void execute_ind_app(const char* code) {
     set_color(COLOR_YELLOW, COLOR_BLACK);
     print_string("--- App Terminated ---\n");
     set_color(COLOR_WHITE, COLOR_BLACK);
+// FIX 4: App khatam hone par task manager se safely free karo
+    if(pid != -1) {
+        end_task(pid);
+    }
 }
-
 #endif
