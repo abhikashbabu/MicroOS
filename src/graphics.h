@@ -51,6 +51,31 @@ void draw_mouse_pointer(int x, int y) {
         }
     }
 }
+// NAYA: Dynamic Desktop jisme Window ki position aur halat (open/closed) track hogi
+void draw_desktop_dynamic(int win_x, int win_y, int win_open) {
+    clear_graphics(1); // Blue Background
+    
+    // NAYA (DAY 50): Desktop Icon for "Micro-Paint"
+    draw_rect(10, 10, 32, 32, 14); // Yellow Icon Base
+    draw_rect(14, 14, 24, 24, 15); // White inner paper
+    
+    // Taskbar & Start Button
+    draw_rect(0, 180, 320, 20, 7); 
+    draw_rect(2, 182, 30, 16, 2);  
+    
+    // Agar Window open hai, tabhi usko draw karo
+    if (win_open) {
+        // App Window (White)
+        draw_rect(win_x, win_y, 200, 120, 15); 
+        // Title Bar (Dark Blue) - DRAG AREA
+        draw_rect(win_x, win_y, 200, 15, 9);
+        // Close Button (Red)
+        draw_rect(win_x + 185, win_y + 2, 12, 11, 4); 
+        
+        // Paint Canvas Area (Light Gray Area)
+        draw_rect(win_x + 2, win_y + 17, 196, 100, 7); 
+    }
+}
 
 // Micro-Paint Desktop UI (Canvas ke sath)
 void draw_desktop_test() {
