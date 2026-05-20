@@ -49,23 +49,26 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 
-    // NAYA (DAY 47/48): Smart Redraw & Micro-Paint App
+  // NAYA (DAY 49/50): Dynamic Window Dragging & Double Click Engine
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
-        // Desktop ab bas EK baar draw hoga!
-        draw_desktop_test();
+        // Window tracking variables
+        int win_x = 50;
+        int win_y = 40;
+        int win_open = 1;
+        int is_dragging = 0;
+        unsigned int last_click_time = 0; // Double click track karne ke liye
         
-        // NAYA: Purane coordinates track karna
+        draw_desktop_dynamic(win_x, win_y, win_open);
+        
         int old_mouse_x = mouse_x;
         int old_mouse_y = mouse_y;
         
-        // Pehli baar cursor draw karne se pehle background save kar lo
         save_mouse_bg(mouse_x, mouse_y);
         draw_mouse_pointer(mouse_x, mouse_y);
         
         int gui_running = 1;
-        int window_open = 1;
         
         while(gui_running) {
             unsigned char k_status = inb(0x64);
@@ -78,7 +81,7 @@ void execute_command(char* command) {
                 else { 
                     unsigned char mouse_bytes[3];
                     mouse_bytes[0] = inb(0x60);
-                    if (!(mouse_bytes[0] & 0x08)) continue; // Hardware Sync
+                    if (!(mouse_bytes[0] & 0x08)) continue; 
 
                     mouse_wait(0); mouse_bytes[1] = inb(0x60);
                     mouse_wait(0); mouse_bytes[2] = inb(0x60);
@@ -87,7 +90,6 @@ void execute_command(char* command) {
                     int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
-                    // STEP 1: Purane cursor ko hatakar original background wapas lana
                     restore_mouse_bg(old_mouse_x, old_mouse_y);
 
                     mouse_x += (rel_x / 2);
@@ -98,33 +100,55 @@ void execute_command(char* command) {
                     if (mouse_y < 0) mouse_y = 0;
                     if (mouse_y > 193) mouse_y = 193;
 
-                    // STEP 2: LOGIC & DRAWING (Ab screen mitaani nahi padegi!)
+                    // ----------------------------------------------------
+                    // DAY 49: WINDOW DRAGGING LOGIC
+                    // ----------------------------------------------------
                     if (left_click) {
+                        // Agar Title Bar (Dark Blue) par click karke rakha hai
+                        if (win_open && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) {
+                            is_dragging = 1;
+                        }
+                    } else {
+                        is_dragging = 0; // Click chhoda toh dragging band
+                    }
+
+                    // Agar window drag ho rahi hai, toh X/Y update karo aur screen dobara banao
+                    if (is_dragging) {
+                        win_x += (rel_x / 2);
+                        win_y -= (rel_y / 2);
+                        draw_desktop_dynamic(win_x, win_y, win_open); 
+                    }
+
+                    // ----------------------------------------------------
+                    // DAY 50: CLICKS & MICRO-PAINT LOGIC
+                    // ----------------------------------------------------
+                    if (left_click && !is_dragging) {
                         
-                        // NAYA (DAY 48): MICRO-PAINT DRAWING 
-                        // Check if cursor is inside the Canvas (x: 52-246, y: 57-155)
-                        if (window_open && mouse_x >= 52 && mouse_x <= 246 && mouse_y >= 57 && mouse_y <= 155) {
-                            // Draw a Black 3x3 Brush pixel directly on the screen!
+                        // 1. Close Button (Red)
+                        if (win_open && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
+                            win_open = 0;
+                            draw_desktop_dynamic(win_x, win_y, win_open);
+                        }
+
+                        // 2. Desktop Icon Double Click (Yellow Box at top-left)
+                        if (!win_open && mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
+                            // Agar do clicks ke beech ka time (ticks) bohot kam hai = Double Click!
+                            if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
+                                win_open = 1; // Window dobara open kardo!
+                                draw_desktop_dynamic(win_x, win_y, win_open);
+                            }
+                            last_click_time = timer_ticks;
+                        }
+
+                        // 3. Micro-Paint (Canvas Area)
+                        if (win_open && mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 117) {
                             draw_rect(mouse_x, mouse_y, 3, 3, 0); 
-                        }
-                        
-                        // Start Button Click
-                        if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
-                            draw_rect(2, 182, 30, 16, 14); // Yellow
-                        }
-                        
-                        // Close Button Click
-                        if (window_open && mouse_x >= 235 && mouse_x <= 247 && mouse_y >= 42 && mouse_y <= 53) {
-                            draw_rect(50, 40, 200, 120, 1); // Window ko Blue paint se mita do
-                            window_open = 0;
                         }
                     }
 
-                    // Update coordinates for next frame
                     old_mouse_x = mouse_x;
                     old_mouse_y = mouse_y;
 
-                    // STEP 3: Nayi jagah ka background save karna, phir Mouse draw karna
                     save_mouse_bg(mouse_x, mouse_y);
                     draw_mouse_pointer(mouse_x, mouse_y);
                 }
@@ -145,17 +169,6 @@ void execute_command(char* command) {
         if (s < 10) print_char('0');
         itoa(s, buffer); print_string(buffer);
         print_string("\n");
-    }
-// NAYA (DAY 43/44): Enter Graphics Mode
-    else if (strcmp(command, "gui") == 0) {
-        init_vga_graphics(); // Hardware ko Graphics mode mein daalo
-        draw_desktop_test(); // Apni fake Windows draw karo!
-
-        // Warning: Text mode wapas lane ke liye reboot karna padega
-        // Abhi ke liye hum ise endless loop mein daal dete hain
-        while(1) {
-            // Future mein hum mouse coordinate update yahan karenge!
-        }
     }
 
     // NAYA (DAY 42): Mouse hardware test
