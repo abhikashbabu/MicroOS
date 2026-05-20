@@ -9,6 +9,7 @@
 #include "paging.h" // NAYA (Day 31)
 #include "memory.h" // NAYA (Day 32)
 #include "task.h"   // NAYA: Task Manager include kiya
+#include "mouse.h"
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);
@@ -37,6 +38,9 @@ void kernel_main() {
     
     init_fs();
     print_string("[OK] Virtual File System Mounted\n");
+
+    init_mouse();
+    print_string("[OK] PS/2 Mouse Hardware Initialized\n");
     
     // DAY 18: The Auto-Exec Script Logic
     print_string("\n--- Booting .ind Ecosystem ---\n");

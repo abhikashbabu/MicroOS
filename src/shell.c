@@ -9,6 +9,7 @@
 #include "editor.h"      // NAYA
 #include "pci.h"         // NAYA
 #include "task.h"        // NAYA
+#include "mouse.h"
 
 void execute_command(char* command) {
     if (command[0] == '\0') return;
@@ -61,6 +62,63 @@ void execute_command(char* command) {
         itoa(s, buffer); print_string(buffer);
         print_string("\n");
     }
+
+
+    // NAYA (DAY 42): Mouse hardware test
+    else if (strcmp(command, "mousetest") == 0) {
+        clear_screen();
+        set_color(COLOR_WHITE, COLOR_BLUE);
+        draw_window(0, 0, 80, 25, "Mouse Diagnostic Mode - Press [ESC] to Exit", COLOR_BLUE);
+        
+        // Mouse packet data (3 bytes aate hain har movement par)
+        char mouse_bytes[3];
+        
+        while(1) {
+            // Check Keyboard for ESC Key (Exit)
+            unsigned char k_status = inb(0x64);
+            if (k_status & 1) {
+                if (!(k_status & 0x20)) { // Data from Keyboard
+                    unsigned char scancode = inb(0x60);
+                    if (scancode == 0x01) break; // 0x01 is ESC
+                } else {
+                    // Data from Mouse (Bit 5 is set)
+                    mouse_bytes[0] = inb(0x60);
+                    mouse_wait(0); mouse_bytes[1] = inb(0x60);
+                    mouse_wait(0); mouse_bytes[2] = inb(0x60);
+                    
+                    // Purana cursor mitana (Black space)
+                    cursor_x = mouse_x; cursor_y = mouse_y; update_cursor(cursor_x, cursor_y);
+                    print_char(' ');
+
+                    // X aur Y update karna (Packet 1 aur 2 mein movement hoti hai)
+                    // Mouse bytes[1] is X movement, bytes[2] is Y movement
+                    int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100);
+                    int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
+
+                    mouse_x += (rel_x / 2); // Divide by 2 for speed control
+                    mouse_y -= (rel_y / 2); // Y is inverted
+
+                    // Screen limits
+                    if (mouse_x < 0) mouse_x = 0;
+                    if (mouse_x > 79) mouse_x = 79;
+                    if (mouse_y < 1) mouse_y = 1;
+                    if (mouse_y > 24) mouse_y = 24;
+
+                    // Naya cursor draw karna (Red block)
+                    set_color(COLOR_LIGHT_RED, COLOR_LIGHT_RED);
+                    cursor_x = mouse_x; cursor_y = mouse_y; update_cursor(cursor_x, cursor_y);
+                    print_char('X'); // X character ko red print kar rahe hain
+                    set_color(COLOR_WHITE, COLOR_BLUE);
+                }
+            }
+        }
+        
+        // Test close hone par wapas OS mode
+        set_color(COLOR_WHITE, COLOR_BLACK);
+        clear_screen();
+        draw_top_bar(" Micro OS v0.1 | .ind Application Runtime");
+    }
+
     else if (strcmp(command, "reboot") == 0) {
         print_string("Rebooting Micro OS...\n");
         outb(0x64, 0xFE);
@@ -234,6 +292,7 @@ void execute_command(char* command) {
         append_file(filename, &command[idx]);
         print_string("Content appended successfully.\n");
     }
+    
     // NAYA: 'date' command
     else if (strcmp(command, "date") == 0) {
         int d, m, y;
