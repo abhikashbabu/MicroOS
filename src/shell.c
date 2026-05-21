@@ -49,16 +49,20 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 
-  // NAYA (DAY 49/50): Dynamic Window Dragging & Double Click Engine
+  // --------------------------------------------------------
+    // ULTIMATE GUI COMMAND (DAY 51/52) - Micro Paint Pro
+    // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
-        // Window tracking variables
         int win_x = 50;
         int win_y = 40;
         int win_open = 1;
         int is_dragging = 0;
-        unsigned int last_click_time = 0; // Double click track karne ke liye
+        unsigned int last_click_time = 0; 
+        
+        // NAYA (DAY 52): Brush ka default color Black (0)
+        int brush_color = 0; 
         
         draw_desktop_dynamic(win_x, win_y, win_open);
         
@@ -76,7 +80,7 @@ void execute_command(char* command) {
             if (k_status & 1) { 
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
-                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC for Reboot
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC to reboot
                 } 
                 else { 
                     unsigned char mouse_bytes[3];
@@ -100,49 +104,55 @@ void execute_command(char* command) {
                     if (mouse_y < 0) mouse_y = 0;
                     if (mouse_y > 193) mouse_y = 193;
 
-                    // ----------------------------------------------------
-                    // DAY 49: WINDOW DRAGGING LOGIC
-                    // ----------------------------------------------------
+                    // DRAGGING LOGIC
                     if (left_click) {
-                        // Agar Title Bar (Dark Blue) par click karke rakha hai
                         if (win_open && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) {
                             is_dragging = 1;
                         }
                     } else {
-                        is_dragging = 0; // Click chhoda toh dragging band
+                        is_dragging = 0; 
                     }
 
-                    // Agar window drag ho rahi hai, toh X/Y update karo aur screen dobara banao
                     if (is_dragging) {
                         win_x += (rel_x / 2);
                         win_y -= (rel_y / 2);
                         draw_desktop_dynamic(win_x, win_y, win_open); 
                     }
 
-                    // ----------------------------------------------------
-                    // DAY 50: CLICKS & MICRO-PAINT LOGIC
-                    // ----------------------------------------------------
+                    // CLICK LOGIC
                     if (left_click && !is_dragging) {
-                        
-                        // 1. Close Button (Red)
+                        // Close Button
                         if (win_open && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
                             win_open = 0;
                             draw_desktop_dynamic(win_x, win_y, win_open);
                         }
 
-                        // 2. Desktop Icon Double Click (Yellow Box at top-left)
+                        // Desktop Icon (Yellow Box)
                         if (!win_open && mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                            // Agar do clicks ke beech ka time (ticks) bohot kam hai = Double Click!
                             if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                win_open = 1; // Window dobara open kardo!
+                                win_open = 1; 
                                 draw_desktop_dynamic(win_x, win_y, win_open);
                             }
                             last_click_time = timer_ticks;
                         }
 
-                        // 3. Micro-Paint (Canvas Area)
-                        if (win_open && mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 117) {
-                            draw_rect(mouse_x, mouse_y, 3, 3, 0); 
+                        // ----------------------------------------------------
+                        // NAYA (DAY 52): PALETTE COLOR SELECTION
+                        // ----------------------------------------------------
+                        if (win_open && mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
+                            if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; // Black
+                            else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; // Red
+                            else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; // Green
+                            else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; // Blue
+                            else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; // Yellow
+                            else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; // Eraser (Gray)
+                        }
+
+                        // ----------------------------------------------------
+                        // NAYA (DAY 52): DYNAMIC CANVAS PAINTING
+                        // ----------------------------------------------------
+                        if (win_open && mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) {
+                            draw_rect(mouse_x, mouse_y, 3, 3, brush_color); // Dynamic color use ho raha hai!
                         }
                     }
 

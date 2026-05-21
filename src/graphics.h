@@ -51,11 +51,11 @@ void draw_mouse_pointer(int x, int y) {
         }
     }
 }
-// NAYA: Dynamic Desktop jisme Window ki position aur halat (open/closed) track hogi
+// NAYA (DAY 51): Updated Desktop with Color Palette Toolbar
 void draw_desktop_dynamic(int win_x, int win_y, int win_open) {
     clear_graphics(1); // Blue Background
     
-    // NAYA (DAY 50): Desktop Icon for "Micro-Paint"
+    // Desktop Icon for "Micro-Paint"
     draw_rect(10, 10, 32, 32, 14); // Yellow Icon Base
     draw_rect(14, 14, 24, 24, 15); // White inner paper
     
@@ -65,15 +65,25 @@ void draw_desktop_dynamic(int win_x, int win_y, int win_open) {
     
     // Agar Window open hai, tabhi usko draw karo
     if (win_open) {
-        // App Window (White)
-        draw_rect(win_x, win_y, 200, 120, 15); 
+        // App Window (White) - HEIGHT BADA DI HAI (135 tak)
+        draw_rect(win_x, win_y, 200, 135, 15); 
         // Title Bar (Dark Blue) - DRAG AREA
         draw_rect(win_x, win_y, 200, 15, 9);
         // Close Button (Red)
         draw_rect(win_x + 185, win_y + 2, 12, 11, 4); 
         
-        // Paint Canvas Area (Light Gray Area)
-        draw_rect(win_x + 2, win_y + 17, 196, 100, 7); 
+        // Paint Canvas Area (Light Gray Area) - Thoda chota kiya hai toolbar ke liye
+        draw_rect(win_x + 2, win_y + 17, 196, 95, 7); 
+
+        // ----------------------------------------------------
+        // NAYA (DAY 51): COLOR PALETTE TOOLBAR
+        // ----------------------------------------------------
+        draw_rect(win_x + 5, win_y + 116, 15, 15, 0);   // Black Brush
+        draw_rect(win_x + 25, win_y + 116, 15, 15, 4);  // Red Brush
+        draw_rect(win_x + 45, win_y + 116, 15, 15, 2);  // Green Brush
+        draw_rect(win_x + 65, win_y + 116, 15, 15, 1);  // Blue Brush
+        draw_rect(win_x + 85, win_y + 116, 15, 15, 14); // Yellow Brush
+        draw_rect(win_x + 105, win_y + 116, 15, 15, 7); // ERASER (Matches canvas gray color)
     }
 }
 
