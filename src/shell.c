@@ -49,42 +49,36 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 
-  // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 51/52) - Micro Paint Pro
+ // --------------------------------------------------------
+    // ULTIMATE GUI COMMAND (DAY 55/56) - The Start Menu Hub
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
-        int win_x = 50;
-        int win_y = 40;
+        int win_x = 50, win_y = 40;
         int win_open = 1;
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
-        
-        // NAYA (DAY 52): Brush ka default color Black (0)
         int brush_color = 0; 
         
-        draw_desktop_dynamic(win_x, win_y, win_open);
+        // NAYA: Start Menu State
+        int start_menu_open = 0; 
         
-        int old_mouse_x = mouse_x;
-        int old_mouse_y = mouse_y;
+        // Dhyan do: Ab 4 parameters ja rahe hain
+        draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
         
+        int old_mouse_x = mouse_x, old_mouse_y = mouse_y;
         save_mouse_bg(mouse_x, mouse_y);
         draw_mouse_pointer(mouse_x, mouse_y);
         
         int gui_running = 1;
         
-      while(gui_running) {
+        while(gui_running) {
             
-            // ----------------------------------------------------
-            // NAYA (DAY 54): LIVE CLOCK ENGINE
-            // ----------------------------------------------------
+            // Live Clock
             int h, m, s;
             get_time(&h, &m, &s);
-            // Ek choti si condition taaki clock continuously blink na kare, bas silently update ho
-            if (timer_ticks % 10 == 0) { 
-                draw_gui_time(h, m); 
-            }
+            if (timer_ticks % 10 == 0) draw_gui_time(h, m); 
 
             unsigned char k_status = inb(0x64);
             
@@ -105,72 +99,96 @@ void execute_command(char* command) {
                     int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
-                    // Mouse pointer restore
                     restore_mouse_bg(old_mouse_x, old_mouse_y);
 
-                    mouse_x += (rel_x / 2);
-                    mouse_y -= (rel_y / 2);
+                    mouse_x += (rel_x / 2); mouse_y -= (rel_y / 2);
 
                     if (mouse_x < 0) mouse_x = 0;
                     if (mouse_x > 313) mouse_x = 313;
                     if (mouse_y < 0) mouse_y = 0;
                     if (mouse_y > 193) mouse_y = 193;
 
-                    // DRAGGING LOGIC
+                    // DRAGGING
                     if (left_click) {
                         if (win_open && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) {
+                            // Agar drag shuru kiya toh Start menu band kardo
+                            start_menu_open = 0; 
                             is_dragging = 1;
                         }
-                    } else {
-                        is_dragging = 0; 
-                    }
+                    } else { is_dragging = 0; }
 
                     if (is_dragging) {
-                        win_x += (rel_x / 2);
-                        win_y -= (rel_y / 2);
-                        draw_desktop_dynamic(win_x, win_y, win_open); 
+                        win_x += (rel_x / 2); win_y -= (rel_y / 2);
+                        draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open); 
                     }
 
                     // CLICK LOGIC
                     if (left_click && !is_dragging) {
-                        // Close Button
-                        if (win_open && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
-                            win_open = 0;
-                            draw_desktop_dynamic(win_x, win_y, win_open);
-                        }
-
-                        // Desktop Icon (Yellow Box)
-                        if (!win_open && mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                            if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                win_open = 1; 
-                                draw_desktop_dynamic(win_x, win_y, win_open);
+                        
+                        // ----------------------------------------------------
+                        // NAYA (DAY 56): START MENU LOGIC
+                        // ----------------------------------------------------
+                        
+                        // 1. Start Button Clicked (Toggle Menu)
+                        if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
+                            if (timer_ticks - last_click_time > 10) { // Prevent ultra-fast double clicking
+                                start_menu_open = !start_menu_open; // Open hai toh close, close hai toh open
+                                draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
+                                last_click_time = timer_ticks;
                             }
-                            last_click_time = timer_ticks;
                         }
-
-                        // ----------------------------------------------------
-                        // NAYA (DAY 52): PALETTE COLOR SELECTION
-                        // ----------------------------------------------------
-                        if (win_open && mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                            if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; // Black
-                            else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; // Red
-                            else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; // Green
-                            else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; // Blue
-                            else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; // Yellow
-                            else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; // Eraser (Gray)
+                        
+                        // 2. Start Menu is OPEN and user clicks inside it
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 100 && mouse_y <= 180) {
+                            // Option 1: Open Paint
+                            if (mouse_y >= 110 && mouse_y <= 125) {
+                                win_open = 1;
+                                start_menu_open = 0; // Action ke baad menu close
+                            }
+                            // Option 2: Close All Windows
+                            else if (mouse_y >= 135 && mouse_y <= 150) {
+                                win_open = 0;
+                                start_menu_open = 0;
+                            }
+                            // Option 3: Reboot OS
+                            else if (mouse_y >= 160 && mouse_y <= 175) {
+                                outb(0x64, 0xFE); 
+                            }
+                            draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
                         }
-
-                        // ----------------------------------------------------
-                        // NAYA (DAY 52): DYNAMIC CANVAS PAINTING
-                        // ----------------------------------------------------
-                        if (win_open && mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) {
-                            draw_rect(mouse_x, mouse_y, 3, 3, brush_color); // Dynamic color use ho raha hai!
+                        
+                        // 3. Start Menu khula hai par bahar click kiya -> Menu Band kardo
+                        else if (start_menu_open) {
+                            start_menu_open = 0;
+                            draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
+                        }
+                        
+                        // --- NORMAL WINDOW CLICKS (Agar Menu band hai) ---
+                        else {
+                            if (win_open && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
+                                win_open = 0; draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
+                            }
+                            if (!win_open && mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
+                                if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
+                                    win_open = 1; draw_desktop_dynamic(win_x, win_y, win_open, start_menu_open);
+                                }
+                                last_click_time = timer_ticks;
+                            }
+                            if (win_open && mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
+                                if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
+                                else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
+                                else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
+                                else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
+                                else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
+                                else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
+                            }
+                            if (win_open && mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) {
+                                draw_rect(mouse_x, mouse_y, 3, 3, brush_color); 
+                            }
                         }
                     }
 
-                    old_mouse_x = mouse_x;
-                    old_mouse_y = mouse_y;
-
+                    old_mouse_x = mouse_x; old_mouse_y = mouse_y;
                     save_mouse_bg(mouse_x, mouse_y);
                     draw_mouse_pointer(mouse_x, mouse_y);
                 }
