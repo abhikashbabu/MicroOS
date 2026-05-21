@@ -49,14 +49,14 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 
- // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 59/60) - Multi App & Keyboard & Icons
+// --------------------------------------------------------
+    // ULTIMATE GUI COMMAND (DAY 61/62) - Fixed File System Bridge
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // Default: 0=Desktop, 1=Paint, 2=Notes (OS boot hote hi desktop dikhega)
+        int app_mode = 0; 
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
@@ -64,8 +64,9 @@ void execute_command(char* command) {
         
         char note_text[200] = {0};
         int note_len = 0;
+        int note_saved = 0; // NAYA: OS ko batane ke liye ki file save ho gayi
         
-        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
         
         int old_mouse_x = mouse_x, old_mouse_y = mouse_y;
         save_mouse_bg(mouse_x, mouse_y);
@@ -76,9 +77,7 @@ void execute_command(char* command) {
         while(gui_running) {
             int h, m, s;
             get_time(&h, &m, &s);
-            if (timer_ticks % 10 == 0) {
-                draw_gui_time(h, m); 
-            }
+            if (timer_ticks % 10 == 0) draw_gui_time(h, m); 
 
             unsigned char k_status = inb(0x64);
             
@@ -86,29 +85,20 @@ void execute_command(char* command) {
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
                     
-                    if (scancode == 0x01) { 
-                        outb(0x64, 0xFE); // ESC = Reboot
-                    } 
+                  if (scancode == 0x01) { 
+                        outb(0x64, 0xFE); // ESC = Reboot the OS safely
+                    }
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
-                        if (scancode == 0x0E && note_len > 0) { // BACKSPACE
-                            note_len--;
+                        // Agar kuch bhi type kiya, toh SAVE button wapas Green ho jayega
+                        if (scancode == 0x0E && note_len > 0) { note_text[--note_len] = '\0'; note_saved = 0; } 
+                        else if (scancode == 0x39 && note_len < 199) { note_text[note_len++] = ' '; note_text[note_len] = '\0'; note_saved = 0; }
+                        else if (note_len < 199 && keyboard_map[scancode] != 0) {
+                            note_text[note_len++] = keyboard_map[scancode];
                             note_text[note_len] = '\0';
-                        } 
-                        else if (scancode == 0x39) { // SPACE
-                            if (note_len < 199) { 
-                                note_text[note_len++] = ' '; 
-                                note_text[note_len] = '\0'; 
-                            }
-                        }
-                        else if (note_len < 199) {
-                            char c = keyboard_map[scancode];
-                            if (c != 0) {
-                                note_text[note_len++] = c;
-                                note_text[note_len] = '\0';
-                            }
+                            note_saved = 0; 
                         }
                         restore_mouse_bg(old_mouse_x, old_mouse_y);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                         save_mouse_bg(mouse_x, mouse_y);
                         draw_mouse_pointer(mouse_x, mouse_y);
                     }
@@ -118,114 +108,107 @@ void execute_command(char* command) {
                     mouse_bytes[0] = inb(0x60);
                     if (!(mouse_bytes[0] & 0x08)) continue; 
 
-                    mouse_wait(0); mouse_bytes[1] = inb(0x60);
-                    mouse_wait(0); mouse_bytes[2] = inb(0x60);
+                    mouse_wait(0); mouse_bytes[1] = inb(0x60); mouse_wait(0); mouse_bytes[2] = inb(0x60);
 
                     int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100);
                     int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
                     restore_mouse_bg(old_mouse_x, old_mouse_y);
-                    mouse_x += (rel_x / 2); 
-                    mouse_y -= (rel_y / 2);
+                    mouse_x += (rel_x / 2); mouse_y -= (rel_y / 2);
 
-                    if (mouse_x < 0) { mouse_x = 0; }
-                    if (mouse_x > 313) { mouse_x = 313; }
-                    if (mouse_y < 0) { mouse_y = 0; }
-                    if (mouse_y > 193) { mouse_y = 193; }
+                    if (mouse_x < 0) { mouse_x = 0; } if (mouse_x > 313) { mouse_x = 313; }
+                    if (mouse_y < 0) { mouse_y = 0; } if (mouse_y > 193) { mouse_y = 193; }
 
                     if (left_click) {
                         if (app_mode > 0 && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) {
-                            start_menu_open = 0; 
-                            is_dragging = 1;
+                            start_menu_open = 0; is_dragging = 1;
                         }
-                    } else { 
-                        is_dragging = 0; 
-                    }
+                    } else { is_dragging = 0; }
 
                     if (is_dragging) {
-                        win_x += (rel_x / 2); 
-                        win_y -= (rel_y / 2);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text); 
+                        win_x += (rel_x / 2); win_y -= (rel_y / 2);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved); 
                     }
 
                     if (left_click && !is_dragging) {
                         
-                        // Toggle Start Menu
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { 
                                 start_menu_open = !start_menu_open; 
-                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                                 last_click_time = timer_ticks;
                             }
                         }
-                        // Start Menu Options
                         else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 80 && mouse_y <= 180) {
                             if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 1; start_menu_open = 0; } 
                             else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 2; start_menu_open = 0; } 
                             else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
                             else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
-                            
-                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                         }
                         else if (start_menu_open) {
-                            start_menu_open = 0; 
-                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                            start_menu_open = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                         }
                         else {
-                            // ------------------------------------------------
-                            // NAYA: DESKTOP ICONS DOUBLE CLICK LOGIC
-                            // ------------------------------------------------
-                            if (app_mode == 0) { // Sirf tab click ho jab Desktop khali ho
-                                // Paint Icon (Yellow)
+                            if (app_mode == 0) { 
                                 if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 1; 
-                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                                        app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                                     }
                                     last_click_time = timer_ticks;
                                 }
-                                // Notes Icon (Cyan)
                                 else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 2; 
-                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                                        app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                                     }
                                     last_click_time = timer_ticks;
                                 }
                             }
-
-                            // Close Button
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
-                                app_mode = 0; 
-                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text);
+                                app_mode = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
                             }
                             
-                            // Paint App Clicks
-                            if (app_mode == 1) {
+                            if (app_mode == 1) { // Paint
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) { brush_color = 0; }
-                                    else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) { brush_color = 4; }
-                                    else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) { brush_color = 2; }
-                                    else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) { brush_color = 1; }
-                                    else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) { brush_color = 14; }
-                                    else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) { brush_color = 7; }
+                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
+                                    else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
+                                    else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
+                                    else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
+                                    else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
+                                    else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
+                                    
+                                    else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) {
+                                        draw_rect(win_x + 2, win_y + 17, 196, 95, 7); 
+                                    }
                                 }
                                 if (mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) {
                                     draw_rect(mouse_x, mouse_y, 3, 3, brush_color); 
                                 }
                             }
+                            else if (app_mode == 2) { // Notes
+                                // NAYA BUG-FREE SAVE LOGIC
+                                if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131 && mouse_x >= win_x + 155 && mouse_x <= win_x + 195) {
+                                    // Sirf tab save hoga agar kuch type kiya hai aur pehle se save nahi hua
+                                    if (note_len > 0 && note_saved == 0) {
+                                        if (find_file("note.txt") != -1) { delete_file("note.txt"); } // Purani delete
+                                        create_file("note.txt", note_text); // Nayi save
+                                        
+                                        note_saved = 1; // State update
+                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved); // Screen update
+                                    }
+                                }
+                            }
                         }
                     }
-
-                    old_mouse_x = mouse_x; 
-                    old_mouse_y = mouse_y;
-                    
+                    old_mouse_x = mouse_x; old_mouse_y = mouse_y;
                     save_mouse_bg(mouse_x, mouse_y);
                     draw_mouse_pointer(mouse_x, mouse_y);
                 }
             }
         }
+     init_vga_graphics(); 
+        outb(0x64, 0xFE); // Fallback reboot
     }
     else if (strcmp(command, "time") == 0) {
         int h, m, s;

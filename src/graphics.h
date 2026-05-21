@@ -71,20 +71,16 @@ void draw_gui_string(char* str, int x, int y, unsigned char color) {
         i++;
     }
 }
-
 // ----------------------------------------------------
-// NAYA (DAY 60): MULTI-APP DESKTOP
-// app_mode: 0 = None, 1 = Paint, 2 = Notes
+// NAYA (DAY 61/62 FIXED): MULTI-APP DESKTOP WITH 'note_saved' STATE
 // ----------------------------------------------------
-void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text) {
+void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved) {
     clear_graphics(1); // Blue Background
     
-    // Icon 1: Paint
+    // Desktop Icons
     draw_rect(10, 10, 32, 32, 14); draw_rect(14, 14, 24, 24, 15); 
     draw_gui_string("PNT", 15, 45, 15); 
-    
-    // Icon 2: Notes
-    draw_rect(60, 10, 32, 32, 15); draw_rect(64, 14, 24, 24, 11); // Cyan Icon
+    draw_rect(60, 10, 32, 32, 15); draw_rect(64, 14, 24, 24, 11); 
     draw_gui_string("NOT", 65, 45, 15); 
     
     // Taskbar 
@@ -92,46 +88,55 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
     draw_rect(2, 182, 30, 16, 2);  
     draw_gui_string("OS", 10, 187, 15); 
     
-    // Application Window Renderer
     if (app_mode > 0) {
         draw_rect(win_x, win_y, 200, 135, 15); // Main Window
         draw_rect(win_x, win_y, 200, 15, 9);   // Title Bar
-        draw_rect(win_x + 185, win_y + 2, 12, 11, 4); // Close Button
+        draw_rect(win_x + 185, win_y + 2, 12, 11, 4); // Close
         draw_char('X', win_x + 189, win_y + 5, 15);
         
         if (app_mode == 1) {
-            // PAINT APP UI
             draw_gui_string("MICRO PAINT", win_x + 5, win_y + 5, 15);
-            draw_rect(win_x + 2, win_y + 17, 196, 95, 7); 
+            draw_rect(win_x + 2, win_y + 17, 196, 95, 7); // Canvas
+            
+            // Color Palette
             draw_rect(win_x + 5, win_y + 116, 15, 15, 0);  
             draw_rect(win_x + 25, win_y + 116, 15, 15, 4);  
             draw_rect(win_x + 45, win_y + 116, 15, 15, 2);  
             draw_rect(win_x + 65, win_y + 116, 15, 15, 1);  
             draw_rect(win_x + 85, win_y + 116, 15, 15, 14); 
             draw_rect(win_x + 105, win_y + 116, 15, 15, 7); 
+            
+            // CLEAR BUTTON (Red)
+            draw_rect(win_x + 135, win_y + 116, 40, 15, 4);
+            draw_gui_string("CLEAR", win_x + 140, win_y + 121, 15);
         } 
         else if (app_mode == 2) {
-            // NAYA (DAY 60): NOTES APP UI
             draw_gui_string("MINI NOTES", win_x + 5, win_y + 5, 15);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 15); // Clean White Canvas
+            draw_rect(win_x + 2, win_y + 17, 196, 95, 15); // White Canvas
             
             // Draw Typed Text
-            int tx = win_x + 5;
-            int ty = win_y + 22;
+            int tx = win_x + 5; int ty = win_y + 22;
             for(int i = 0; note_text[i] != '\0'; i++) {
-                draw_char(note_text[i], tx, ty, 0); // Black text
+                draw_char(note_text[i], tx, ty, 0); 
                 tx += 4;
-                if (tx > win_x + 190) { tx = win_x + 5; ty += 7; } // Auto Line Break!
+                if (tx > win_x + 190) { tx = win_x + 5; ty += 7; } 
             }
-            draw_char('_', tx, ty, 0); // Typing Blinker
+            draw_char('_', tx, ty, 0); 
+            
+            // NAYA: DYNAMIC SAVE BUTTON
+            if (note_saved) {
+                draw_rect(win_x + 155, win_y + 116, 40, 15, 14); // Yellow (Success)
+                draw_gui_string("SAVD", win_x + 163, win_y + 121, 0); // Black Text
+            } else {
+                draw_rect(win_x + 155, win_y + 116, 40, 15, 2); // Green (Ready)
+                draw_gui_string("SAVE", win_x + 163, win_y + 121, 15); // White Text
+            }
         }
     }
 
-    // START MENU RENDERER
     if (start_menu_open) {
         draw_rect(2, 80, 120, 100, 7); 
         draw_gui_string("MENU", 10, 83, 0);
-        
         draw_rect(10, 95, 15, 15, 14); draw_gui_string("PAINT", 35, 100, 0); 
         draw_rect(10, 115, 15, 15, 11); draw_gui_string("NOTES", 35, 120, 0); 
         draw_rect(10, 135, 15, 15, 1); draw_gui_string("CLOSE", 35, 140, 0); 
