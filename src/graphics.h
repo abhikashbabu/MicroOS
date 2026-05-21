@@ -105,4 +105,54 @@ void draw_desktop_test() {
     draw_rect(52, 57, 196, 100, 7); 
 }
 
+// ----------------------------------------------------
+// NAYA (DAY 53): BITMAP FONT ENGINE (3x5 Pixels)
+// ----------------------------------------------------
+
+// 0 se 9 tak numbers aur 10th index par ':' (Colon) ka map
+unsigned char font3x5[11][5] = {
+    {7,5,5,5,7}, // 0 (111, 101, 101, 101, 111)
+    {2,2,2,2,2}, // 1 (010, 010, 010, 010, 010)
+    {7,1,7,4,7}, // 2
+    {7,1,7,1,7}, // 3
+    {5,5,7,1,1}, // 4
+    {7,4,7,1,7}, // 5
+    {7,4,7,5,7}, // 6
+    {7,1,1,1,1}, // 7
+    {7,5,7,5,7}, // 8
+    {7,5,7,1,7}, // 9
+    {0,2,0,2,0}  // 10 (:)
+};
+
+// Ek digit ko screen par pixels se paint karne ka function
+void draw_digit(int digit, int x, int y, unsigned char color) {
+    if (digit < 0 || digit > 10) return;
+    for(int row = 0; row < 5; row++) {
+        int pattern = font3x5[digit][row];
+        // Binary bits check karke pixel draw kar rahe hain
+        if(pattern & 4) put_pixel(x,   y + row, color);
+        if(pattern & 2) put_pixel(x + 1, y + row, color);
+        if(pattern & 1) put_pixel(x + 2, y + row, color);
+    }
+}
+
+// ----------------------------------------------------
+// NAYA (DAY 54): TASKBAR CLOCK RENDERER
+// ----------------------------------------------------
+void draw_gui_time(int h, int m) {
+    // 1. Purana time mitane ke liye taskbar ke kone mein ek Grey box banao
+    draw_rect(275, 185, 40, 10, 7); // 7 = Taskbar Gray
+
+    // 2. Hours draw karo (Black color - 0)
+    draw_digit(h / 10, 275, 187, 0); // Tens digit
+    draw_digit(h % 10, 279, 187, 0); // Ones digit
+
+    // 3. Colon (:) draw karo
+    draw_digit(10, 284, 187, 0);
+
+    // 4. Minutes draw karo
+    draw_digit(m / 10, 289, 187, 0); 
+    draw_digit(m % 10, 293, 187, 0); 
+}
+
 #endif

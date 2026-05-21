@@ -74,7 +74,18 @@ void execute_command(char* command) {
         
         int gui_running = 1;
         
-        while(gui_running) {
+      while(gui_running) {
+            
+            // ----------------------------------------------------
+            // NAYA (DAY 54): LIVE CLOCK ENGINE
+            // ----------------------------------------------------
+            int h, m, s;
+            get_time(&h, &m, &s);
+            // Ek choti si condition taaki clock continuously blink na kare, bas silently update ho
+            if (timer_ticks % 10 == 0) { 
+                draw_gui_time(h, m); 
+            }
+
             unsigned char k_status = inb(0x64);
             
             if (k_status & 1) { 
@@ -94,6 +105,7 @@ void execute_command(char* command) {
                     int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
+                    // Mouse pointer restore
                     restore_mouse_bg(old_mouse_x, old_mouse_y);
 
                     mouse_x += (rel_x / 2);
