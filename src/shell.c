@@ -50,13 +50,19 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 61/62) - Fixed File System Bridge
+    // ULTIMATE GUI COMMAND (DAY 63) - The Embedded CMD
     // --------------------------------------------------------
-    else if (strcmp(command, "gui") == 0) {
+ else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
+        // NAYA (DAY 64): BOOT SCREEN & DELAY
+        draw_boot_screen();
+        
+        // 2-3 second ka desi delay loop (taaki user logo dekh sake)
+// ~5 second ka desi delay loop
+for(volatile int delay = 0; delay < 2000000000; delay++) {}        
         int win_x = 50, win_y = 40;
-        int app_mode = 0; 
+        int app_mode = 0; // 0=Desktop, 1=Paint, 2=Notes, 3=CMD
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
@@ -64,9 +70,14 @@ void execute_command(char* command) {
         
         char note_text[200] = {0};
         int note_len = 0;
-        int note_saved = 0; // NAYA: OS ko batane ke liye ki file save ho gayi
+        int note_saved = 0; 
         
-        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
+        // NAYA: CMD Variables
+        char cmd_in[50] = {0};
+        int cmd_len = 0;
+        char cmd_out[400] = "MICRO OS v2.0\nTYPE LS OR CAT NOTE.TXT\n------------------\n";
+        
+        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
         
         int old_mouse_x = mouse_x, old_mouse_y = mouse_y;
         save_mouse_bg(mouse_x, mouse_y);
@@ -85,38 +96,87 @@ void execute_command(char* command) {
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
                     
-                  if (scancode == 0x01) { 
-                        outb(0x64, 0xFE); // ESC = Reboot the OS safely
-                    }
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC = Hard Reboot
+                    
+                    // NOTES TYPING
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
-                        // Agar kuch bhi type kiya, toh SAVE button wapas Green ho jayega
                         if (scancode == 0x0E && note_len > 0) { note_text[--note_len] = '\0'; note_saved = 0; } 
                         else if (scancode == 0x39 && note_len < 199) { note_text[note_len++] = ' '; note_text[note_len] = '\0'; note_saved = 0; }
                         else if (note_len < 199 && keyboard_map[scancode] != 0) {
-                            note_text[note_len++] = keyboard_map[scancode];
-                            note_text[note_len] = '\0';
-                            note_saved = 0; 
+                            note_text[note_len++] = keyboard_map[scancode]; note_text[note_len] = '\0'; note_saved = 0; 
                         }
                         restore_mouse_bg(old_mouse_x, old_mouse_y);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
-                        save_mouse_bg(mouse_x, mouse_y);
-                        draw_mouse_pointer(mouse_x, mouse_y);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                        save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
+                    }
+                    
+                    // NAYA: CMD TYPING & EXECUTION
+                    else if (app_mode == 3 && !(scancode & 0x80)) {
+                        if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } // Backspace
+                        else if (scancode == 0x1C) { // ENTER PRESSED!
+                            
+                            // 1. Output string clear karo agar full hone wali hai
+                            int out_len = 0; while(cmd_out[out_len] != '\0') out_len++;
+                            if (out_len > 300) { cmd_out[0] = '\0'; out_len = 0; }
+                            
+                            // 2. Command ko string mein add karo
+                            cmd_out[out_len++] = '>'; cmd_out[out_len] = '\0';
+                            int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; }
+                            cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
+                            
+                            // 3. Command Check: 'ls'
+                            if (cmd_in[0] == 'l' && cmd_in[1] == 's') {
+                                if (file_count == 0) {
+                                    char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
+                                } else {
+                                    for(int f = 0; f < file_count; f++) {
+                                        int k = 0; while(file_system[f].name[k] != '\0') cmd_out[out_len++] = file_system[f].name[k++];
+                                        cmd_out[out_len++] = ' ';
+                                    }
+                                    cmd_out[out_len++] = '\n';
+                                }
+                            }
+                            // 4. Command Check: 'cat note.txt'
+                            else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') {
+                                int f_idx = find_file(&cmd_in[4]);
+                                if (f_idx != -1) {
+                                    int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++];
+                                    cmd_out[out_len++] = '\n';
+                                } else {
+                                    char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
+                                }
+                            }
+                            // 5. Command Check: 'clear'
+                            else if (cmd_in[0]=='c' && cmd_in[1]=='l') {
+                                cmd_out[0] = '\0'; out_len = 0;
+                            }
+                            else {
+                                char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
+                            }
+                            
+                            cmd_out[out_len] = '\0';
+                            cmd_len = 0; cmd_in[0] = '\0'; // Input line clear
+                        }
+                        else if (scancode == 0x39 && cmd_len < 40) { cmd_in[cmd_len++] = ' '; cmd_in[cmd_len] = '\0'; }
+                        else if (cmd_len < 40 && keyboard_map[scancode] != 0) {
+                            cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0';
+                        }
+                        
+                        restore_mouse_bg(old_mouse_x, old_mouse_y);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                        save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                     }
                 } 
                 else { 
-                    unsigned char mouse_bytes[3];
-                    mouse_bytes[0] = inb(0x60);
+                    unsigned char mouse_bytes[3]; mouse_bytes[0] = inb(0x60);
                     if (!(mouse_bytes[0] & 0x08)) continue; 
 
                     mouse_wait(0); mouse_bytes[1] = inb(0x60); mouse_wait(0); mouse_bytes[2] = inb(0x60);
-
-                    int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100);
-                    int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
+                    int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100); int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
                     restore_mouse_bg(old_mouse_x, old_mouse_y);
                     mouse_x += (rel_x / 2); mouse_y -= (rel_y / 2);
-
                     if (mouse_x < 0) { mouse_x = 0; } if (mouse_x > 313) { mouse_x = 313; }
                     if (mouse_y < 0) { mouse_y = 0; } if (mouse_y > 193) { mouse_y = 193; }
 
@@ -128,87 +188,76 @@ void execute_command(char* command) {
 
                     if (is_dragging) {
                         win_x += (rel_x / 2); win_y -= (rel_y / 2);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved); 
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
                     }
 
                     if (left_click && !is_dragging) {
-                        
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { 
                                 start_menu_open = !start_menu_open; 
-                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
+                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                                 last_click_time = timer_ticks;
                             }
                         }
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 80 && mouse_y <= 180) {
-                            if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 1; start_menu_open = 0; } 
-                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 2; start_menu_open = 0; } 
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 60 && mouse_y <= 180) {
+                            if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 1; start_menu_open = 0; } 
+                            else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 2; start_menu_open = 0; } 
+                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 3; start_menu_open = 0; } // CMD
                             else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
                             else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
-                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
+                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                         }
                         else if (start_menu_open) {
-                            start_menu_open = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
+                            start_menu_open = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                         }
                         else {
                             if (app_mode == 0) { 
                                 if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
-                                    }
-                                    last_click_time = timer_ticks;
+                                        app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                    } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
-                                    }
-                                    last_click_time = timer_ticks;
+                                        app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                    } last_click_time = timer_ticks;
+                                }
+                                else if (mouse_x >= 110 && mouse_x <= 142 && mouse_y >= 10 && mouse_y <= 42) {
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
+                                        app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                    } last_click_time = timer_ticks;
                                 }
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
-                                app_mode = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved);
+                                app_mode = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                             }
                             
-                            if (app_mode == 1) { // Paint
+                            // Paint Actions
+                            if (app_mode == 1) { 
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
-                                    else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
-                                    else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
-                                    else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
-                                    else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
-                                    else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
-                                    
-                                    else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) {
-                                        draw_rect(win_x + 2, win_y + 17, 196, 95, 7); 
-                                    }
+                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
+                                    else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { draw_rect(win_x + 2, win_y + 17, 196, 95, 7); }
                                 }
-                                if (mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) {
-                                    draw_rect(mouse_x, mouse_y, 3, 3, brush_color); 
-                                }
+                                if (mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) { draw_rect(mouse_x, mouse_y, 3, 3, brush_color); }
                             }
-                            else if (app_mode == 2) { // Notes
-                                // NAYA BUG-FREE SAVE LOGIC
+                            // Notes Actions
+                            else if (app_mode == 2) { 
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131 && mouse_x >= win_x + 155 && mouse_x <= win_x + 195) {
-                                    // Sirf tab save hoga agar kuch type kiya hai aur pehle se save nahi hua
                                     if (note_len > 0 && note_saved == 0) {
-                                        if (find_file("note.txt") != -1) { delete_file("note.txt"); } // Purani delete
-                                        create_file("note.txt", note_text); // Nayi save
-                                        
-                                        note_saved = 1; // State update
-                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved); // Screen update
+                                        if (find_file("note.txt") != -1) { delete_file("note.txt"); } 
+                                        create_file("note.txt", note_text); note_saved = 1; 
+                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
                                     }
                                 }
                             }
                         }
                     }
                     old_mouse_x = mouse_x; old_mouse_y = mouse_y;
-                    save_mouse_bg(mouse_x, mouse_y);
-                    draw_mouse_pointer(mouse_x, mouse_y);
+                    save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                 }
             }
         }
-     init_vga_graphics(); 
-        outb(0x64, 0xFE); // Fallback reboot
+        init_vga_graphics(); outb(0x64, 0xFE); 
     }
     else if (strcmp(command, "time") == 0) {
         int h, m, s;
