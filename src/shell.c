@@ -12,6 +12,7 @@
 #include "mouse.h"
 #include "vga.h"
 #include "graphics.h"
+#include "disk.h" // ISKO UPAR ADD KARNA HAI
 void execute_command(char* command) {
     if (command[0] == '\0') return;
     
@@ -50,32 +51,35 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 63) - The Embedded CMD
+    // ULTIMATE GUI COMMAND (DAY 66/67) - Hard Drive Integration
     // --------------------------------------------------------
- else if (strcmp(command, "gui") == 0) {
+    else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
-        
-        // NAYA (DAY 64): BOOT SCREEN & DELAY
         draw_boot_screen();
+        for(volatile int delay = 0; delay < 80000000; delay++) {} 
         
-        // 2-3 second ka desi delay loop (taaki user logo dekh sake)
-// ~5 second ka desi delay loop
-for(volatile int delay = 0; delay < 2000000000; delay++) {}        
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // 0=Desktop, 1=Paint, 2=Notes, 3=CMD
+        int app_mode = 0; 
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
         int start_menu_open = 0; 
         
-        char note_text[200] = {0};
+        // ----------------------------------------------------
+        // NAYA (DAY 67): BOOT HOTE HI HARD DRIVE SE PADHO
+        // ----------------------------------------------------
+        char note_text[512] = {0}; // Buffer 512 bytes ka kar diya
+        read_sector_lba28(10, (unsigned char*)note_text); // LBA 10 padho
+        
         int note_len = 0;
+        // Purani length calculate karo
+        while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
+        
         int note_saved = 0; 
         
-        // NAYA: CMD Variables
         char cmd_in[50] = {0};
         int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v2.0\nTYPE LS OR CAT NOTE.TXT\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nHDD PERSISTENCE ACTIVE\n------------------\n";
         
         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
         
@@ -96,7 +100,7 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
                     
-                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC = Hard Reboot
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC = Reboot
                     
                     // NOTES TYPING
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
@@ -110,21 +114,17 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                     }
                     
-                    // NAYA: CMD TYPING & EXECUTION
+                    // CMD TYPING
                     else if (app_mode == 3 && !(scancode & 0x80)) {
-                        if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } // Backspace
-                        else if (scancode == 0x1C) { // ENTER PRESSED!
-                            
-                            // 1. Output string clear karo agar full hone wali hai
+                        if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } 
+                        else if (scancode == 0x1C) { 
                             int out_len = 0; while(cmd_out[out_len] != '\0') out_len++;
                             if (out_len > 300) { cmd_out[0] = '\0'; out_len = 0; }
                             
-                            // 2. Command ko string mein add karo
                             cmd_out[out_len++] = '>'; cmd_out[out_len] = '\0';
                             int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; }
                             cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
                             
-                            // 3. Command Check: 'ls'
                             if (cmd_in[0] == 'l' && cmd_in[1] == 's') {
                                 if (file_count == 0) {
                                     char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
@@ -136,7 +136,6 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                                     cmd_out[out_len++] = '\n';
                                 }
                             }
-                            // 4. Command Check: 'cat note.txt'
                             else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') {
                                 int f_idx = find_file(&cmd_in[4]);
                                 if (f_idx != -1) {
@@ -146,16 +145,10 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                                     char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
                                 }
                             }
-                            // 5. Command Check: 'clear'
-                            else if (cmd_in[0]=='c' && cmd_in[1]=='l') {
-                                cmd_out[0] = '\0'; out_len = 0;
-                            }
-                            else {
-                                char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
-                            }
+                            else if (cmd_in[0]=='c' && cmd_in[1]=='l') { cmd_out[0] = '\0'; out_len = 0; }
+                            else { char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
                             
-                            cmd_out[out_len] = '\0';
-                            cmd_len = 0; cmd_in[0] = '\0'; // Input line clear
+                            cmd_out[out_len] = '\0'; cmd_len = 0; cmd_in[0] = '\0'; 
                         }
                         else if (scancode == 0x39 && cmd_len < 40) { cmd_in[cmd_len++] = ' '; cmd_in[cmd_len] = '\0'; }
                         else if (cmd_len < 40 && keyboard_map[scancode] != 0) {
@@ -202,7 +195,7 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                         else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 60 && mouse_y <= 180) {
                             if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 1; start_menu_open = 0; } 
                             else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 2; start_menu_open = 0; } 
-                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 3; start_menu_open = 0; } // CMD
+                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 3; start_menu_open = 0; } 
                             else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
                             else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
                             draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
@@ -245,7 +238,14 @@ for(volatile int delay = 0; delay < 2000000000; delay++) {}
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131 && mouse_x >= win_x + 155 && mouse_x <= win_x + 195) {
                                     if (note_len > 0 && note_saved == 0) {
                                         if (find_file("note.txt") != -1) { delete_file("note.txt"); } 
-                                        create_file("note.txt", note_text); note_saved = 1; 
+                                        create_file("note.txt", note_text); 
+                                        
+                                        // ----------------------------------------------------
+                                        // NAYA (DAY 67): DISK PAR WRITE KARO (SECTOR 10)
+                                        // ----------------------------------------------------
+                                        write_sector_lba28(10, (unsigned char*)note_text);
+                                        
+                                        note_saved = 1; 
                                         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
                                     }
                                 }
