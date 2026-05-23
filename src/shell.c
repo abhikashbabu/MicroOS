@@ -51,7 +51,7 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 68/69) - Disk Utility Support
+    // ULTIMATE GUI COMMAND (DAY 70/71) - Sector Paging Engine
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
@@ -59,23 +59,31 @@ void execute_command(char* command) {
         for(volatile int delay = 0; delay < 80000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // 0=Desktop, 1=PNT, 2=NOT, 3=CMD, 4=DSK
+        int app_mode = 0; 
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
         int start_menu_open = 0; 
         
+        // Notes State
         char note_text[512] = {0};
-        read_sector_lba28(10, (unsigned char*)note_text); // Boot read
-        
+        read_sector_lba28(10, (unsigned char*)note_text); 
         int note_len = 0;
         while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
         int note_saved = 0; 
         
+        // CMD State
         char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nHDD PERSISTENCE ACTIVE\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nHDD PAGING ACTIVE\n------------------\n";
         
-        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+        // ----------------------------------------------------
+        // NAYA (DAY 70): DYNAMIC DISK VARIABLES
+        // ----------------------------------------------------
+        int current_lba = 10; // Start pointing to Notes sector
+        char disk_buffer[512] = {0};
+        
+        // Ab 10 parameters pass honge
+        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
         
         int old_mouse_x = mouse_x, old_mouse_y = mouse_y;
         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
@@ -89,9 +97,8 @@ void execute_command(char* command) {
             if (k_status & 1) { 
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
-                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } 
                     
-                    // Notes Typing
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
                         if (scancode == 0x0E && note_len > 0) { note_text[--note_len] = '\0'; note_saved = 0; } 
                         else if (scancode == 0x39 && note_len < 199) { note_text[note_len++] = ' '; note_text[note_len] = '\0'; note_saved = 0; }
@@ -99,10 +106,9 @@ void execute_command(char* command) {
                             note_text[note_len++] = keyboard_map[scancode]; note_text[note_len] = '\0'; note_saved = 0; 
                         }
                         restore_mouse_bg(old_mouse_x, old_mouse_y);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                     }
-                    // CMD Typing
                     else if (app_mode == 3 && !(scancode & 0x80)) {
                         if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } 
                         else if (scancode == 0x1C) { 
@@ -121,13 +127,6 @@ void execute_command(char* command) {
                                     } cmd_out[out_len++] = '\n';
                                 }
                             }
-                            else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') {
-                                int f_idx = find_file(&cmd_in[4]);
-                                if (f_idx != -1) {
-                                    int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++];
-                                    cmd_out[out_len++] = '\n';
-                                } else { char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
-                            }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='l') { cmd_out[0] = '\0'; out_len = 0; }
                             else { char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
                             cmd_out[out_len] = '\0'; cmd_len = 0; cmd_in[0] = '\0'; 
@@ -135,7 +134,7 @@ void execute_command(char* command) {
                         else if (scancode == 0x39 && cmd_len < 40) { cmd_in[cmd_len++] = ' '; cmd_in[cmd_len] = '\0'; }
                         else if (cmd_len < 40 && keyboard_map[scancode] != 0) { cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0'; }
                         restore_mouse_bg(old_mouse_x, old_mouse_y);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                     }
                 } 
@@ -159,14 +158,14 @@ void execute_command(char* command) {
 
                     if (is_dragging) {
                         win_x += (rel_x / 2); win_y -= (rel_y / 2);
-                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
+                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); 
                     }
 
                     if (left_click && !is_dragging) {
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { 
                                 start_menu_open = !start_menu_open; 
-                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                                 last_click_time = timer_ticks;
                             }
                         }
@@ -174,38 +173,40 @@ void execute_command(char* command) {
                             if (mouse_y >= 55 && mouse_y <= 70) { app_mode = 1; start_menu_open = 0; } 
                             else if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 2; start_menu_open = 0; } 
                             else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 3; start_menu_open = 0; } 
-                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 4; start_menu_open = 0; } // DISK
+                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 4; start_menu_open = 0; 
+                                // Menu se open karne par current buffer set karo
+                                for(int i=0; i<512; i++) disk_buffer[i]=0;
+                                read_sector_lba28(current_lba, (unsigned char*)disk_buffer);
+                            } 
                             else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
                             else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
-                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                         }
                         else if (start_menu_open) {
-                            start_menu_open = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                            start_menu_open = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                         }
                         else {
                             if (app_mode == 0) { 
                                 if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 110 && mouse_x <= 142 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); } last_click_time = timer_ticks;
                                 }
-                                // ----------------------------------------------------
-                                // NAYA (DAY 69): DISK ICON DOUBLE CLICK LOGIC
-                                // ----------------------------------------------------
                                 else if (mouse_x >= 160 && mouse_x <= 192 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { 
-                                        read_sector_lba28(10, (unsigned char*)note_text); // Read fresh from drive!
+                                        for(int i=0; i<512; i++) disk_buffer[i]=0;
+                                        read_sector_lba28(current_lba, (unsigned char*)disk_buffer); 
                                         app_mode = 4; 
-                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
+                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); 
                                     } last_click_time = timer_ticks;
                                 }
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
-                                app_mode = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                app_mode = 0; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer);
                             }
                             
                             // Paint Actions
@@ -220,11 +221,34 @@ void execute_command(char* command) {
                             else if (app_mode == 2) { 
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131 && mouse_x >= win_x + 155 && mouse_x <= win_x + 195) {
                                     if (note_len > 0 && note_saved == 0) {
-                                        if (find_file("note.txt") != -1) { delete_file("note.txt"); } 
-                                        create_file("note.txt", note_text); 
                                         write_sector_lba28(10, (unsigned char*)note_text);
                                         note_saved = 1; 
-                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
+                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); 
+                                    }
+                                }
+                            }
+                            // ----------------------------------------------------
+                            // NAYA (DAY 71): DISK VIEWER BUTTONS
+                            // ----------------------------------------------------
+                            else if (app_mode == 4) {
+                                if (mouse_y >= win_y + 19 && mouse_y <= win_y + 31) {
+                                    // PREV Button Click
+                                    if (mouse_x >= win_x + 120 && mouse_x <= win_x + 150) {
+                                        if (current_lba > 0) {
+                                            current_lba--;
+                                            for(int i=0; i<512; i++) disk_buffer[i]=0; // Clear old junk
+                                            read_sector_lba28(current_lba, (unsigned char*)disk_buffer);
+                                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); 
+                                        }
+                                    }
+                                    // NEXT Button Click
+                                    else if (mouse_x >= win_x + 160 && mouse_x <= win_x + 190) {
+                                        if (current_lba < 999) { // Prevent overflowing LBA display
+                                            current_lba++;
+                                            for(int i=0; i<512; i++) disk_buffer[i]=0; // Clear old junk
+                                            read_sector_lba28(current_lba, (unsigned char*)disk_buffer);
+                                            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer); 
+                                        }
                                     }
                                 }
                             }
