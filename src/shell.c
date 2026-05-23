@@ -13,6 +13,8 @@
 #include "vga.h"
 #include "graphics.h"
 #include "disk.h" // ISKO UPAR ADD KARNA HAI
+#include "sound.h"
+
 void execute_command(char* command) {
     if (command[0] == '\0') return;
     
@@ -50,12 +52,19 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 72/73) - Theme Engine & Control Panel
+    // ULTIMATE GUI COMMAND (DAY 74/75) - The Audio Engine
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         draw_boot_screen();
-        for(volatile int delay = 0; delay < 80000000; delay++) {} 
+        
+        // ----------------------------------------------------
+        // NAYA (DAY 75): OS STARTUP CHIME (Boot Music)
+        // ----------------------------------------------------
+        os_beep(800, 3);  // Low Note
+        os_beep(1200, 6); // High Note (Ding-Ding!)
+        
+        for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
         int app_mode = 0; 
@@ -74,7 +83,7 @@ void execute_command(char* command) {
         int note_saved = 0; 
         
         char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nTHEME ENGINE ACTIVE\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nAUDIO ENGINE ACTIVE\n------------------\n";
         
         int current_lba = 10; 
         char disk_buffer[512] = {0};
@@ -167,12 +176,14 @@ void execute_command(char* command) {
                     if (left_click && !is_dragging) {
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { 
+                                os_beep(1000, 1); // MENU CLICK SOUND
                                 start_menu_open = !start_menu_open; 
                                 draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color);
                                 last_click_time = timer_ticks;
                             }
                         }
                         else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 20 && mouse_y <= 180) {
+                            os_beep(1500, 2); // APP OPEN SOUND
                             if (mouse_y >= 35 && mouse_y <= 50) { app_mode = 1; start_menu_open = 0; } 
                             else if (mouse_y >= 55 && mouse_y <= 70) { app_mode = 2; start_menu_open = 0; } 
                             else if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 3; start_menu_open = 0; } 
@@ -191,23 +202,24 @@ void execute_command(char* command) {
                         else {
                             if (app_mode == 0) { 
                                 if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 110 && mouse_x <= 142 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 160 && mouse_x <= 192 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { 
+                                        os_beep(1500, 2);
                                         for(int i=0; i<512; i++) { disk_buffer[i]=0; } 
                                         read_sector_lba28(current_lba, (unsigned char*)disk_buffer); 
                                         app_mode = 4; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); 
                                     } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 210 && mouse_x <= 242 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 5; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 5; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); } last_click_time = timer_ticks;
                                 }
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) {
@@ -225,6 +237,7 @@ void execute_command(char* command) {
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131 && mouse_x >= win_x + 155 && mouse_x <= win_x + 195) {
                                     if (note_len > 0 && note_saved == 0) {
                                         write_sector_lba28(10, (unsigned char*)note_text); note_saved = 1; 
+                                        os_beep(2000, 2); // SAVE SUCCESS SOUND
                                         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color); 
                                     }
                                 }
