@@ -3,37 +3,45 @@
 
 #include "vga.h"
 
-void clear_graphics(unsigned char color) {
-    for(int i = 0; i < 320 * 200; i++) vga_mem[i] = color;
-}
-void draw_rect(int x, int y, int w, int h, unsigned char color) {
-    for(int i = y; i < y + h; i++) {
-        for(int j = x; j < x + w; j++) put_pixel(j, i, color);
-    }
-}
-unsigned char get_pixel(int x, int y) {
-    if(x >= 0 && x < 320 && y >= 0 && y < 200) return vga_mem[(y * 320) + x];
-    return 0;
-}
-unsigned char mouse_buffer[36]; 
-void save_mouse_bg(int x, int y) {
-    int idx = 0;
-    for(int i = 0; i < 6; i++) {
-        for(int j = 0; j <= i; j++) mouse_buffer[idx++] = get_pixel(x + j, y + i);
-    }
-}
-void restore_mouse_bg(int x, int y) {
-    int idx = 0;
-    for(int i = 0; i < 6; i++) {
-        for(int j = 0; j <= i; j++) put_pixel(x + j, y + i, mouse_buffer[idx++]);
-    }
-}
-void draw_mouse_pointer(int x, int y) {
-    for(int i = 0; i < 6; i++) {
-        for(int j = 0; j <= i; j++) put_pixel(x + j, y + i, 15);
+// ----------------------------------------------------
+// NAYA (DAY 76): THE BACK BUFFER (Double Buffering)
+// 64000 bytes ki ek secret RAM memory jahan hum chupke se drawing karenge
+// ----------------------------------------------------
+unsigned char back_buffer[64000];
+
+// Screen par direct likhne ki jagah ab hum Buffer mein likhenge
+void put_pixel_buf(int x, int y, unsigned char color) {
+    if(x >= 0 && x < 320 && y >= 0 && y < 200) {
+        back_buffer[(y * 320) + x] = color;
     }
 }
 
+// Jab puri drawing ho jaye, tab is function se screen par ek sath chipkayenge!
+void swap_buffers() {
+    unsigned int* vga = (unsigned int*)vga_mem;
+    unsigned int* buf = (unsigned int*)back_buffer;
+    for(int i = 0; i < 16000; i++) { // 16000 * 4 bytes = 64000 bytes (Fast Copy)
+        vga[i] = buf[i];
+    }
+}
+
+void clear_graphics(unsigned char color) {
+    for(int i = 0; i < 64000; i++) back_buffer[i] = color;
+}
+
+void draw_rect(int x, int y, int w, int h, unsigned char color) {
+    for(int i = y; i < y + h; i++) {
+        for(int j = x; j < x + w; j++) put_pixel_buf(j, i, color);
+    }
+}
+
+void draw_mouse_pointer(int x, int y) {
+    for(int i = 0; i < 6; i++) {
+        for(int j = 0; j <= i; j++) put_pixel_buf(x + j, y + i, 15);
+    }
+}
+
+// Font Arrays
 unsigned char font3x5[11][5] = {
     {7,5,5,5,7}, {2,2,2,2,2}, {7,1,7,4,7}, {7,1,7,1,7}, {5,5,7,1,1}, 
     {7,4,7,1,7}, {7,4,7,5,7}, {7,1,1,1,1}, {7,5,7,5,7}, {7,5,7,1,7}, {0,2,0,2,0}  
@@ -62,9 +70,9 @@ void draw_char(char c, int x, int y, unsigned char color) {
         else if (c == '/') pattern = (row==0)?1:(row==1)?2:(row==2)?2:(row==3)?4:(row==4)?4:0; 
         else return;
 
-        if(pattern & 4) put_pixel(x,   y + row, color);
-        if(pattern & 2) put_pixel(x + 1, y + row, color);
-        if(pattern & 1) put_pixel(x + 2, y + row, color);
+        if(pattern & 4) put_pixel_buf(x,   y + row, color);
+        if(pattern & 2) put_pixel_buf(x + 1, y + row, color);
+        if(pattern & 1) put_pixel_buf(x + 2, y + row, color);
     }
 }
 
@@ -179,6 +187,7 @@ void draw_boot_screen() {
     draw_gui_string("MICRO OS", 125, 75, 15, 200);       
     draw_gui_string("VERSION 3.0", 115, 95, 14, 200);    
     draw_gui_string("LOADING ENGINE...", 105, 120, 7, 200); 
+    swap_buffers(); // NAYA: Boot screen ko bhi buffer se screen pe bhejenge
 }
 
 void draw_gui_time(int h, int m) {
