@@ -3,26 +3,28 @@
 
 #include "vga.h"
 
-// ----------------------------------------------------
-// NAYA (DAY 76): THE BACK BUFFER (Double Buffering)
-// 64000 bytes ki ek secret RAM memory jahan hum chupke se drawing karenge
-// ----------------------------------------------------
+// 64KB Screen Back Buffer
 unsigned char back_buffer[64000];
 
-// Screen par direct likhne ki jagah ab hum Buffer mein likhenge
+// ----------------------------------------------------
+// NAYA (DAY 79): PAINT APP KI SECRET MEMORY (VRAM)
+// ----------------------------------------------------
+unsigned char paint_canvas[196 * 95];
+
+void init_paint_canvas() {
+    for(int i = 0; i < 196 * 95; i++) paint_canvas[i] = 7; // Light Gray (Default)
+}
+
 void put_pixel_buf(int x, int y, unsigned char color) {
     if(x >= 0 && x < 320 && y >= 0 && y < 200) {
         back_buffer[(y * 320) + x] = color;
     }
 }
 
-// Jab puri drawing ho jaye, tab is function se screen par ek sath chipkayenge!
 void swap_buffers() {
     unsigned int* vga = (unsigned int*)vga_mem;
     unsigned int* buf = (unsigned int*)back_buffer;
-    for(int i = 0; i < 16000; i++) { // 16000 * 4 bytes = 64000 bytes (Fast Copy)
-        vga[i] = buf[i];
-    }
+    for(int i = 0; i < 16000; i++) { vga[i] = buf[i]; }
 }
 
 void clear_graphics(unsigned char color) {
@@ -41,7 +43,6 @@ void draw_mouse_pointer(int x, int y) {
     }
 }
 
-// Font Arrays
 unsigned char font3x5[11][5] = {
     {7,5,5,5,7}, {2,2,2,2,2}, {7,1,7,4,7}, {7,1,7,1,7}, {5,5,7,1,1}, 
     {7,4,7,1,7}, {7,4,7,5,7}, {7,1,1,1,1}, {7,5,7,5,7}, {7,5,7,1,7}, {0,2,0,2,0}  
@@ -105,7 +106,18 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
         
         if (app_mode == 1) { 
             draw_gui_string("MICRO PAINT", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 95, 7); 
+            
+            // ----------------------------------------------------
+            // NAYA (DAY 80): PAINT VRAM RENDERER
+            // Ab hum direct color nahi bharte, VRAM array padhte hain
+            // ----------------------------------------------------
+            int p_idx = 0;
+            for(int iy = 0; iy < 95; iy++) {
+                for(int ix = 0; ix < 196; ix++) {
+                    put_pixel_buf(win_x + 2 + ix, win_y + 17 + iy, paint_canvas[p_idx++]);
+                }
+            }
+            
             draw_rect(win_x + 5, win_y + 116, 15, 15, 0); draw_rect(win_x + 25, win_y + 116, 15, 15, 4);  
             draw_rect(win_x + 45, win_y + 116, 15, 15, 2); draw_rect(win_x + 65, win_y + 116, 15, 15, 1);  
             draw_rect(win_x + 85, win_y + 116, 15, 15, 14); draw_rect(win_x + 105, win_y + 116, 15, 15, 7); 
@@ -168,13 +180,11 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
     if (start_menu_open) {
         draw_rect(2, 20, 120, 160, 7); 
         draw_gui_string("MENU", 10, 23, 0, 50);
-        
         draw_rect(10, 35, 15, 15, 14); draw_gui_string("PAINT", 35, 40, 0, 50); 
         draw_rect(10, 55, 15, 15, 11); draw_gui_string("NOTES", 35, 60, 0, 50); 
         draw_rect(10, 75, 15, 15, 0); draw_gui_string("CMD", 35, 80, 0, 50); 
         draw_rect(10, 95, 15, 15, 13); draw_gui_string("DISK", 35, 100, 0, 50); 
         draw_rect(10, 115, 15, 15, 8); draw_gui_string("THEME", 35, 120, 0, 50); 
-        
         draw_rect(10, 135, 15, 15, 1); draw_gui_string("CLOSE", 35, 140, 0, 50); 
         draw_rect(10, 155, 15, 15, 4); draw_gui_string("REBOOT", 35, 160, 0, 50); 
     }
@@ -187,7 +197,7 @@ void draw_boot_screen() {
     draw_gui_string("MICRO OS", 125, 75, 15, 200);       
     draw_gui_string("VERSION 3.0", 115, 95, 14, 200);    
     draw_gui_string("LOADING ENGINE...", 105, 120, 7, 200); 
-    swap_buffers(); // NAYA: Boot screen ko bhi buffer se screen pe bhejenge
+    swap_buffers(); 
 }
 
 void draw_gui_time(int h, int m) {

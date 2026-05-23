@@ -51,16 +51,17 @@ void execute_command(char* command) {
         print_string("Built for the .ind ecosystem.\n");
         print_string("Developer: Abhikash\n");
     } 
+
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 74/75) - The Audio Engine
-    // --------------------------------------------------------
-  // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 76-78) - 60 FPS Compositor Loop
+    // ULTIMATE GUI COMMAND (DAY 79/80) - Persistent App States
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
-        draw_boot_screen(); // Back buffer se render hoga
         
+        // NAYA: Paint Canvas ko default gray color se bharna
+        init_paint_canvas(); 
+        
+        draw_boot_screen();
         os_beep(800, 3); os_beep(1200, 6);
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
@@ -68,7 +69,7 @@ void execute_command(char* command) {
         int app_mode = 0; 
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
-        int brush_color = 0; 
+        int brush_color = 0; // Ab ye finally array mein save hoga
         int start_menu_open = 0; 
         
         unsigned char bg_color = 1; 
@@ -89,10 +90,9 @@ void execute_command(char* command) {
         int gui_running = 1;
         while(gui_running) {
             
-            // 1. INPUT PROCESSING PHASE
             unsigned char k_status = inb(0x64);
             if (k_status & 1) { 
-                if (!(k_status & 0x20)) { // KEYBOARD
+                if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
                     if (scancode == 0x01) { outb(0x64, 0xFE); } 
                     
@@ -136,7 +136,7 @@ void execute_command(char* command) {
                         else if (cmd_len < 40 && keyboard_map[scancode] != 0) { cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0'; }
                     }
                 } 
-                else { // MOUSE
+                else { 
                     unsigned char mouse_bytes[3]; mouse_bytes[0] = inb(0x60);
                     if (!(mouse_bytes[0] & 0x08)) continue; 
                     mouse_wait(0); mouse_bytes[1] = inb(0x60); mouse_wait(0); mouse_bytes[2] = inb(0x60);
@@ -190,14 +190,34 @@ void execute_command(char* command) {
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
+                            // ----------------------------------------------------
+                            // NAYA (DAY 80): PAINT VRAM WRITER
+                            // Ab dot direct VRAM memory mein save hoga
+                            // ----------------------------------------------------
                             if (app_mode == 1) { 
+                                // Color Selector & Clear
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
-                                    // Paint Clear Logic will need custom handling in double buffer, 
-                                    // for now it resets drawing but we'll improve it later.
+                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
+                                    else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
+                                    else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
+                                    else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
+                                    else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
+                                    else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
+                                    else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { 
+                                        init_paint_canvas(); // Clear Dabaane par memory saaf kardo
+                                    }
                                 }
-                                if (mouse_x >= win_x + 2 && mouse_x <= win_x + 198 && mouse_y >= win_y + 17 && mouse_y <= win_y + 112) { 
-                                    // Drawing dot logic
+                                // Drawing Logic
+                                if (mouse_x >= win_x + 2 && mouse_x <= win_x + 195 && mouse_y >= win_y + 17 && mouse_y <= win_y + 109) { 
+                                    for(int by=0; by<3; by++) {
+                                        for(int bx=0; bx<3; bx++) {
+                                            int cx = (mouse_x - (win_x + 2)) + bx;
+                                            int cy = (mouse_y - (win_y + 17)) + by;
+                                            if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) {
+                                                paint_canvas[(cy * 196) + cx] = brush_color;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             else if (app_mode == 2) { 
@@ -228,14 +248,9 @@ void execute_command(char* command) {
                 }
             }
 
-            // ----------------------------------------------------
-            // 2. RENDERING PHASE (HAR FRAME PAR BUFFER SWAP HOGA)
-            // ----------------------------------------------------
             draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color);
             int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
             draw_mouse_pointer(mouse_x, mouse_y);
-            
-            // Ye line jadoo karegi! Pura frame ek sath screen par bhejna:
             swap_buffers(); 
         }
         init_vga_graphics(); outb(0x64, 0xFE); 
