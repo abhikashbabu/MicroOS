@@ -51,7 +51,7 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 66/67) - Hard Drive Integration
+    // ULTIMATE GUI COMMAND (DAY 68/69) - Disk Utility Support
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
@@ -59,50 +59,39 @@ void execute_command(char* command) {
         for(volatile int delay = 0; delay < 80000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; 
+        int app_mode = 0; // 0=Desktop, 1=PNT, 2=NOT, 3=CMD, 4=DSK
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
         int start_menu_open = 0; 
         
-        // ----------------------------------------------------
-        // NAYA (DAY 67): BOOT HOTE HI HARD DRIVE SE PADHO
-        // ----------------------------------------------------
-        char note_text[512] = {0}; // Buffer 512 bytes ka kar diya
-        read_sector_lba28(10, (unsigned char*)note_text); // LBA 10 padho
+        char note_text[512] = {0};
+        read_sector_lba28(10, (unsigned char*)note_text); // Boot read
         
         int note_len = 0;
-        // Purani length calculate karo
         while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
-        
         int note_saved = 0; 
         
-        char cmd_in[50] = {0};
-        int cmd_len = 0;
+        char cmd_in[50] = {0}; int cmd_len = 0;
         char cmd_out[400] = "MICRO OS v3.0\nHDD PERSISTENCE ACTIVE\n------------------\n";
         
         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
         
         int old_mouse_x = mouse_x, old_mouse_y = mouse_y;
-        save_mouse_bg(mouse_x, mouse_y);
-        draw_mouse_pointer(mouse_x, mouse_y);
+        save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
         
         int gui_running = 1;
-        
         while(gui_running) {
-            int h, m, s;
-            get_time(&h, &m, &s);
+            int h, m, s; get_time(&h, &m, &s);
             if (timer_ticks % 10 == 0) draw_gui_time(h, m); 
 
             unsigned char k_status = inb(0x64);
-            
             if (k_status & 1) { 
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
+                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC
                     
-                    if (scancode == 0x01) { outb(0x64, 0xFE); } // ESC = Reboot
-                    
-                    // NOTES TYPING
+                    // Notes Typing
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
                         if (scancode == 0x0E && note_len > 0) { note_text[--note_len] = '\0'; note_saved = 0; } 
                         else if (scancode == 0x39 && note_len < 199) { note_text[note_len++] = ' '; note_text[note_len] = '\0'; note_saved = 0; }
@@ -113,27 +102,23 @@ void execute_command(char* command) {
                         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
                     }
-                    
-                    // CMD TYPING
+                    // CMD Typing
                     else if (app_mode == 3 && !(scancode & 0x80)) {
                         if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } 
                         else if (scancode == 0x1C) { 
                             int out_len = 0; while(cmd_out[out_len] != '\0') out_len++;
                             if (out_len > 300) { cmd_out[0] = '\0'; out_len = 0; }
-                            
                             cmd_out[out_len++] = '>'; cmd_out[out_len] = '\0';
                             int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; }
                             cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
                             
                             if (cmd_in[0] == 'l' && cmd_in[1] == 's') {
-                                if (file_count == 0) {
-                                    char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
-                                } else {
+                                if (file_count == 0) { char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; } 
+                                else {
                                     for(int f = 0; f < file_count; f++) {
                                         int k = 0; while(file_system[f].name[k] != '\0') cmd_out[out_len++] = file_system[f].name[k++];
                                         cmd_out[out_len++] = ' ';
-                                    }
-                                    cmd_out[out_len++] = '\n';
+                                    } cmd_out[out_len++] = '\n';
                                 }
                             }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') {
@@ -141,20 +126,14 @@ void execute_command(char* command) {
                                 if (f_idx != -1) {
                                     int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++];
                                     cmd_out[out_len++] = '\n';
-                                } else {
-                                    char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++];
-                                }
+                                } else { char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
                             }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='l') { cmd_out[0] = '\0'; out_len = 0; }
                             else { char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
-                            
                             cmd_out[out_len] = '\0'; cmd_len = 0; cmd_in[0] = '\0'; 
                         }
                         else if (scancode == 0x39 && cmd_len < 40) { cmd_in[cmd_len++] = ' '; cmd_in[cmd_len] = '\0'; }
-                        else if (cmd_len < 40 && keyboard_map[scancode] != 0) {
-                            cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0';
-                        }
-                        
+                        else if (cmd_len < 40 && keyboard_map[scancode] != 0) { cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0'; }
                         restore_mouse_bg(old_mouse_x, old_mouse_y);
                         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
                         save_mouse_bg(mouse_x, mouse_y); draw_mouse_pointer(mouse_x, mouse_y);
@@ -163,7 +142,6 @@ void execute_command(char* command) {
                 else { 
                     unsigned char mouse_bytes[3]; mouse_bytes[0] = inb(0x60);
                     if (!(mouse_bytes[0] & 0x08)) continue; 
-
                     mouse_wait(0); mouse_bytes[1] = inb(0x60); mouse_wait(0); mouse_bytes[2] = inb(0x60);
                     int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100); int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
@@ -192,10 +170,11 @@ void execute_command(char* command) {
                                 last_click_time = timer_ticks;
                             }
                         }
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 60 && mouse_y <= 180) {
-                            if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 1; start_menu_open = 0; } 
-                            else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 2; start_menu_open = 0; } 
-                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 3; start_menu_open = 0; } 
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 40 && mouse_y <= 180) {
+                            if (mouse_y >= 55 && mouse_y <= 70) { app_mode = 1; start_menu_open = 0; } 
+                            else if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 2; start_menu_open = 0; } 
+                            else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 3; start_menu_open = 0; } 
+                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 4; start_menu_open = 0; } // DISK
                             else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
                             else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
                             draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
@@ -206,18 +185,22 @@ void execute_command(char* command) {
                         else {
                             if (app_mode == 0) { 
                                 if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
-                                    } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 1; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
-                                    } last_click_time = timer_ticks;
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 2; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
                                 }
                                 else if (mouse_x >= 110 && mouse_x <= 142 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
-                                        app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in);
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { app_mode = 3; draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); } last_click_time = timer_ticks;
+                                }
+                                // ----------------------------------------------------
+                                // NAYA (DAY 69): DISK ICON DOUBLE CLICK LOGIC
+                                // ----------------------------------------------------
+                                else if (mouse_x >= 160 && mouse_x <= 192 && mouse_y >= 10 && mouse_y <= 42) {
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { 
+                                        read_sector_lba28(10, (unsigned char*)note_text); // Read fresh from drive!
+                                        app_mode = 4; 
+                                        draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
                                     } last_click_time = timer_ticks;
                                 }
                             }
@@ -239,12 +222,7 @@ void execute_command(char* command) {
                                     if (note_len > 0 && note_saved == 0) {
                                         if (find_file("note.txt") != -1) { delete_file("note.txt"); } 
                                         create_file("note.txt", note_text); 
-                                        
-                                        // ----------------------------------------------------
-                                        // NAYA (DAY 67): DISK PAR WRITE KARO (SECTOR 10)
-                                        // ----------------------------------------------------
                                         write_sector_lba28(10, (unsigned char*)note_text);
-                                        
                                         note_saved = 1; 
                                         draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in); 
                                     }
