@@ -60,7 +60,7 @@ void draw_char(char c, int x, int y, unsigned char color) {
         else if (c == '[') pattern = (row==0||row==4)?3:2; 
         else if (c == ']') pattern = (row==0||row==4)?6:2; 
         else if (c == '/') pattern = (row==0)?1:(row==1)?2:(row==2)?2:(row==3)?4:(row==4)?4:0; 
-        else return; // Unknown raw bytes ko ignore kar dega (Safe for raw disk data)
+        else return;
 
         if(pattern & 4) put_pixel(x,   y + row, color);
         if(pattern & 2) put_pixel(x + 1, y + row, color);
@@ -72,34 +72,27 @@ void draw_gui_string(char* str, int start_x, int start_y, unsigned char color, i
     int x = start_x;
     int y = start_y;
     for(int i = 0; str[i] != '\0'; i++) {
-        if (str[i] == '\n') { 
-            x = start_x; y += 8; continue;
-        }
+        if (str[i] == '\n') { x = start_x; y += 8; continue; }
         draw_char(str[i], x, y, color);
         x += 4; 
         if (x > start_x + max_width) { x = start_x; y += 8; }
     }
 }
 
-// ----------------------------------------------------
-// NAYA (DAY 70): 10 PARAMETERS WALA DYNAMIC DESKTOP
-// Added: current_lba and disk_buffer
-// ----------------------------------------------------
-void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer) {
-    clear_graphics(1); 
+void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color) {
+    clear_graphics(bg_color); 
     
-    // Icons
     draw_rect(10, 10, 32, 32, 14); draw_rect(14, 14, 24, 24, 15); draw_gui_string("PNT", 15, 45, 15, 100); 
     draw_rect(60, 10, 32, 32, 15); draw_rect(64, 14, 24, 24, 11); draw_gui_string("NOT", 65, 45, 15, 100); 
     draw_rect(110, 10, 32, 32, 8); draw_rect(114, 14, 24, 24, 0); draw_gui_string(">_", 118, 22, 2, 100); draw_gui_string("CMD", 115, 45, 15, 100); 
     draw_rect(160, 10, 32, 32, 5); draw_rect(164, 14, 24, 24, 13); draw_gui_string("HD", 170, 22, 0, 100); draw_gui_string("DSK", 165, 45, 15, 100);
+    draw_rect(210, 10, 32, 32, 7); draw_rect(214, 14, 24, 24, 8); draw_gui_string("SET", 215, 22, 15, 100); draw_gui_string("THEME", 210, 45, 15, 100);
     
-    // Taskbar
     draw_rect(0, 180, 320, 20, 7); draw_rect(2, 182, 30, 16, 2); draw_gui_string("OS", 10, 187, 15, 100); 
     
     if (app_mode > 0) {
         draw_rect(win_x, win_y, 200, 135, 15); 
-        draw_rect(win_x, win_y, 200, 15, 9);   
+        draw_rect(win_x, win_y, 200, 15, win_color); 
         draw_rect(win_x + 185, win_y + 2, 12, 11, 4); draw_char('X', win_x + 189, win_y + 5, 15); 
         
         if (app_mode == 1) { 
@@ -114,11 +107,8 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             draw_gui_string("MINI NOTES", win_x + 5, win_y + 5, 15, 180);
             draw_rect(win_x + 2, win_y + 17, 196, 95, 15); 
             draw_gui_string(note_text, win_x + 5, win_y + 22, 0, 190);
-            if (note_saved) {
-                draw_rect(win_x + 155, win_y + 116, 40, 15, 14); draw_gui_string("SAVD", win_x + 163, win_y + 121, 0, 50);
-            } else {
-                draw_rect(win_x + 155, win_y + 116, 40, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50);
-            }
+            if (note_saved) { draw_rect(win_x + 155, win_y + 116, 40, 15, 14); draw_gui_string("SAVD", win_x + 163, win_y + 121, 0, 50); } 
+            else { draw_rect(win_x + 155, win_y + 116, 40, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50); }
         }
         else if (app_mode == 3) { 
             draw_gui_string("TERMINAL", win_x + 5, win_y + 5, 15, 180);
@@ -126,58 +116,57 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             draw_gui_string(cmd_out, win_x + 5, win_y + 22, 2, 190);
             draw_gui_string(">", win_x + 5, win_y + 120, 15, 10); draw_gui_string(cmd_in, win_x + 12, win_y + 120, 15, 180);
         }
-       else if (app_mode == 4) { 
-            // ----------------------------------------------------
-            // NAYA (DAY 71): TRUE RAW BINARY DISK VIEWER
-            // ----------------------------------------------------
+        else if (app_mode == 4) { 
             draw_gui_string("DISK VIEWER", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 0); // Black screen
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
             
             draw_gui_string("LBA SECTOR:", win_x + 5, win_y + 22, 14, 190); 
-            
             int num_x = win_x + 55;
             if(current_lba >= 100) { draw_char((current_lba/100)+'0', num_x, win_y+22, 14); num_x+=4; }
             if(current_lba >= 10)  { draw_char(((current_lba/10)%10)+'0', num_x, win_y+22, 14); num_x+=4; }
             draw_char((current_lba%10)+'0', num_x, win_y+22, 14);
 
-            // PREV & NEXT Buttons
             draw_rect(win_x + 120, win_y + 19, 30, 12, 4); draw_gui_string("<PREV", win_x + 123, win_y + 23, 15, 30);
             draw_rect(win_x + 160, win_y + 19, 30, 12, 2); draw_gui_string("NEXT>", win_x + 163, win_y + 23, 15, 30);
 
             draw_gui_string("RAW DISK BYTES:\n", win_x + 5, win_y + 35, 2, 190);  
             
-            // ----------------------------------------------------
-            // NAYA ENGINE: Bina ruke raw bytes print karega
-            // ----------------------------------------------------
-            int tx = win_x + 5;
-            int ty = win_y + 50;
-            
-            // Hum pehle 140 bytes print karenge taaki screen par fit aayein
+            int tx = win_x + 5; int ty = win_y + 50;
             for(int i = 0; i < 140; i++) { 
                 char c = disk_buffer[i];
-                
-                // Agar readable text hai (A-Z, a-z, 0-9, ya space) toh White color mein print karo
-                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ') {
-                    draw_char(c, tx, ty, 15); 
-                } 
-                // Agar non-readable machine code ya Null byte (0x00) hai, toh Dark Gray Dot (.) print karo
-                else {
-                    draw_char('.', tx, ty, 8); 
-                }
-                
-                tx += 4; // Agla letter 4 pixel aage
-                if (tx > win_x + 190) { tx = win_x + 5; ty += 8; } // Nayi line
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ') { draw_char(c, tx, ty, 15); } 
+                else { draw_char('.', tx, ty, 8); }
+                tx += 4; if (tx > win_x + 190) { tx = win_x + 5; ty += 8; }
             }
+        }
+        else if (app_mode == 5) {
+            draw_gui_string("CONTROL PANEL", win_x + 5, win_y + 5, 15, 180);
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 7); 
+            
+            draw_gui_string("BACKGROUND THEME:", win_x + 10, win_y + 25, 0, 180);
+            draw_rect(win_x + 10, win_y + 40, 20, 20, 1); 
+            draw_rect(win_x + 40, win_y + 40, 20, 20, 0); 
+            draw_rect(win_x + 70, win_y + 40, 20, 20, 3); 
+            draw_rect(win_x + 100, win_y + 40, 20, 20, 8); 
+
+            draw_gui_string("WINDOW COLOR:", win_x + 10, win_y + 70, 0, 180);
+            draw_rect(win_x + 10, win_y + 85, 20, 20, 9); 
+            draw_rect(win_x + 40, win_y + 85, 20, 20, 4); 
+            draw_rect(win_x + 70, win_y + 85, 20, 20, 2); 
+            draw_rect(win_x + 100, win_y + 85, 20, 20, 5); 
         }
     }
 
     if (start_menu_open) {
-        draw_rect(2, 40, 120, 140, 7); 
-        draw_gui_string("MENU", 10, 43, 0, 50);
-        draw_rect(10, 55, 15, 15, 14); draw_gui_string("PAINT", 35, 60, 0, 50); 
-        draw_rect(10, 75, 15, 15, 11); draw_gui_string("NOTES", 35, 80, 0, 50); 
-        draw_rect(10, 95, 15, 15, 0); draw_gui_string("CMD", 35, 100, 0, 50); 
-        draw_rect(10, 115, 15, 15, 13); draw_gui_string("DISK", 35, 120, 0, 50); 
+        draw_rect(2, 20, 120, 160, 7); 
+        draw_gui_string("MENU", 10, 23, 0, 50);
+        
+        draw_rect(10, 35, 15, 15, 14); draw_gui_string("PAINT", 35, 40, 0, 50); 
+        draw_rect(10, 55, 15, 15, 11); draw_gui_string("NOTES", 35, 60, 0, 50); 
+        draw_rect(10, 75, 15, 15, 0); draw_gui_string("CMD", 35, 80, 0, 50); 
+        draw_rect(10, 95, 15, 15, 13); draw_gui_string("DISK", 35, 100, 0, 50); 
+        draw_rect(10, 115, 15, 15, 8); draw_gui_string("THEME", 35, 120, 0, 50); 
+        
         draw_rect(10, 135, 15, 15, 1); draw_gui_string("CLOSE", 35, 140, 0, 50); 
         draw_rect(10, 155, 15, 15, 4); draw_gui_string("REBOOT", 35, 160, 0, 50); 
     }
