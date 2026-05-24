@@ -64,6 +64,13 @@ void draw_char(char c, int x, int y, unsigned char color) {
         else if (c == '(') pattern = (row==0||row==4)?2:4; 
         else if (c == ')') pattern = (row==0||row==4)?4:2; 
         else if (c == '/') pattern = (row==0)?1:(row==1)?2:(row==2)?2:(row==3)?4:(row==4)?4:0; 
+        // ----------------------------------------------------
+        // NAYA (DAY 83): MATH SYMBOLS SUPPORT
+        // ----------------------------------------------------
+        else if (c == '+') pattern = (row==1)?2:(row==2)?7:(row==3)?2:0;
+        else if (c == '-') pattern = (row==2)?7:0;
+        else if (c == '*') pattern = (row==1)?5:(row==2)?2:(row==3)?5:0;
+        else if (c == '=') pattern = (row==1)?7:(row==3)?7:0;
         else return;
 
         if(pattern & 4) put_pixel_buf(x,   y + row, color);
@@ -81,23 +88,21 @@ void draw_gui_string(char* str, int start_x, int start_y, unsigned char color, i
     }
 }
 
-// ----------------------------------------------------
-// NAYA (DAY 81): 6 APPS DESKTOP (Added sys_ticks param)
-// ----------------------------------------------------
-void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks) {
+// Added calc_display argument
+void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks, char* calc_display) {
     clear_graphics(bg_color); 
     
-    // Desktop Icons
+    // Desktop Icons Row 1
     draw_rect(10, 10, 32, 32, 14); draw_rect(14, 14, 24, 24, 15); draw_gui_string("PNT", 15, 45, 15, 100); 
     draw_rect(60, 10, 32, 32, 15); draw_rect(64, 14, 24, 24, 11); draw_gui_string("NOT", 65, 45, 15, 100); 
     draw_rect(110, 10, 32, 32, 8); draw_rect(114, 14, 24, 24, 0); draw_gui_string(">_", 118, 22, 2, 100); draw_gui_string("CMD", 115, 45, 15, 100); 
     draw_rect(160, 10, 32, 32, 5); draw_rect(164, 14, 24, 24, 13); draw_gui_string("HD", 170, 22, 0, 100); draw_gui_string("DSK", 165, 45, 15, 100);
     draw_rect(210, 10, 32, 32, 7); draw_rect(214, 14, 24, 24, 8); draw_gui_string("SET", 215, 22, 15, 100); draw_gui_string("THEME", 210, 45, 15, 100);
-    
-    // NAYA ICON: SYS MONITOR (Green Box)
     draw_rect(260, 10, 32, 32, 2); draw_rect(264, 14, 24, 24, 10); draw_gui_string("CPU", 267, 22, 0, 100); draw_gui_string("SYS", 265, 45, 15, 100);
     
-    // Taskbar
+    // Desktop Icons Row 2 (CALCULATOR)
+    draw_rect(10, 60, 32, 32, 9); draw_rect(14, 64, 24, 24, 3); draw_gui_string("+ -", 16, 70, 0, 100); draw_gui_string("CALC", 12, 95, 15, 100);
+    
     draw_rect(0, 180, 320, 20, 7); draw_rect(2, 182, 30, 16, 2); draw_gui_string("OS", 10, 187, 15, 100); 
     
     if (app_mode > 0) {
@@ -132,16 +137,13 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
         else if (app_mode == 4) { 
             draw_gui_string("DISK VIEWER", win_x + 5, win_y + 5, 15, 180);
             draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
-            
             draw_gui_string("LBA SECTOR:", win_x + 5, win_y + 22, 14, 190); 
             int num_x = win_x + 55;
             if(current_lba >= 100) { draw_char((current_lba/100)+'0', num_x, win_y+22, 14); num_x+=4; }
             if(current_lba >= 10)  { draw_char(((current_lba/10)%10)+'0', num_x, win_y+22, 14); num_x+=4; }
             draw_char((current_lba%10)+'0', num_x, win_y+22, 14);
-
             draw_rect(win_x + 120, win_y + 19, 30, 12, 4); draw_gui_string("<PREV", win_x + 123, win_y + 23, 15, 30);
             draw_rect(win_x + 160, win_y + 19, 30, 12, 2); draw_gui_string("NEXT>", win_x + 163, win_y + 23, 15, 30);
-
             draw_gui_string("RAW DISK BYTES:\n", win_x + 5, win_y + 35, 2, 190);  
             int tx = win_x + 5; int ty = win_y + 50;
             for(int i = 0; i < 140; i++) { 
@@ -154,64 +156,78 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
         else if (app_mode == 5) {
             draw_gui_string("CONTROL PANEL", win_x + 5, win_y + 5, 15, 180);
             draw_rect(win_x + 2, win_y + 17, 196, 115, 7); 
-            
             draw_gui_string("BACKGROUND THEME:", win_x + 10, win_y + 25, 0, 180);
-            draw_rect(win_x + 10, win_y + 40, 20, 20, 1); 
-            draw_rect(win_x + 40, win_y + 40, 20, 20, 0); 
-            draw_rect(win_x + 70, win_y + 40, 20, 20, 3); 
-            draw_rect(win_x + 100, win_y + 40, 20, 20, 8); 
-
+            draw_rect(win_x + 10, win_y + 40, 20, 20, 1); draw_rect(win_x + 40, win_y + 40, 20, 20, 0); 
+            draw_rect(win_x + 70, win_y + 40, 20, 20, 3); draw_rect(win_x + 100, win_y + 40, 20, 20, 8); 
             draw_gui_string("WINDOW COLOR:", win_x + 10, win_y + 70, 0, 180);
-            draw_rect(win_x + 10, win_y + 85, 20, 20, 9); 
-            draw_rect(win_x + 40, win_y + 85, 20, 20, 4); 
-            draw_rect(win_x + 70, win_y + 85, 20, 20, 2); 
-            draw_rect(win_x + 100, win_y + 85, 20, 20, 5); 
+            draw_rect(win_x + 10, win_y + 85, 20, 20, 9); draw_rect(win_x + 40, win_y + 85, 20, 20, 4); 
+            draw_rect(win_x + 70, win_y + 85, 20, 20, 2); draw_rect(win_x + 100, win_y + 85, 20, 20, 5); 
         }
         else if (app_mode == 6) {
-            // ----------------------------------------------------
-            // NAYA (DAY 82): SYSTEM MONITOR UI (Live Hardware Stats)
-            // ----------------------------------------------------
             draw_gui_string("SYSTEM MONITOR", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 0); // Black Screen
-
-            draw_gui_string("MICRO OS KERNEL", win_x + 5, win_y + 22, 10, 190);
-            draw_gui_string("----------------", win_x + 5, win_y + 30, 7, 190);
-
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
+            draw_gui_string("MICRO OS KERNEL", win_x + 5, win_y + 22, 10, 190); draw_gui_string("----------------", win_x + 5, win_y + 30, 7, 190);
             draw_gui_string("CPU TICKS:", win_x + 5, win_y + 45, 14, 190);
-            
-            // Dynamic Ticks to String (Live Number Drawer)
-            int num = sys_ticks;
-            int div = 10000000;
-            int start_print = 0;
-            int nx = win_x + 55;
+            int num = sys_ticks; int div = 10000000; int start_print = 0; int nx = win_x + 55;
             for(int i = 0; i < 8; i++) {
                 int digit = (num / div) % 10;
                 if (digit != 0) start_print = 1;
-                if (start_print || div == 1) {
-                    draw_char(digit + '0', nx, win_y + 45, 15); // White numbers
-                    nx += 4;
-                }
+                if (start_print || div == 1) { draw_char(digit + '0', nx, win_y + 45, 15); nx += 4; }
                 div /= 10;
             }
-
             draw_gui_string("RAM: 64KB VRAM ALLOCATED", win_x + 5, win_y + 60, 11, 190);
             draw_gui_string("PROCESS: 1 (GUI ENGINE)", win_x + 5, win_y + 75, 13, 190);
             draw_gui_string("STORAGE: ATA IDE PIO", win_x + 5, win_y + 90, 3, 190);
             draw_gui_string("STATUS: STABLE", win_x + 5, win_y + 105, 2, 190);
         }
+        else if (app_mode == 7) {
+            // ----------------------------------------------------
+            // NAYA (DAY 84): CALCULATOR APP UI (4x4 Grid)
+            // ----------------------------------------------------
+            draw_gui_string("CALCULATOR", win_x + 5, win_y + 5, 15, 180);
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 8); // Dark Gray bg
+            
+            // Output Display Box
+            draw_rect(win_x + 10, win_y + 25, 180, 15, 15); 
+            draw_gui_string(calc_display, win_x + 15, win_y + 30, 0, 170); // Black Text on White
+            
+            // Calculator Grid (4 Rows, 4 Cols)
+            char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} };
+            for(int r=0; r<4; r++) {
+                for(int c=0; c<4; c++) {
+                    int bx = win_x + 15 + (c * 45);
+                    int by = win_y + 50 + (r * 20);
+                    // Color styling: 'C' is Red, '=' is Green, Others are Gray
+                    unsigned char btn_col = 7;
+                    if(keys[r][c] == 'C') btn_col = 4;
+                    else if(keys[r][c] == '=') btn_col = 2;
+                    else if(keys[r][c] == '/' || keys[r][c] == '*' || keys[r][c] == '-' || keys[r][c] == '+') btn_col = 3;
+                    
+                    draw_rect(bx, by, 35, 15, btn_col);
+                    draw_char(keys[r][c], bx + 16, by + 5, 0); // Text
+                }
+            }
+        }
     }
 
     if (start_menu_open) {
-        draw_rect(2, 5, 120, 175, 7); 
-        draw_gui_string("MENU", 10, 8, 0, 50);
-        draw_rect(10, 20, 15, 15, 14); draw_gui_string("PAINT", 35, 25, 0, 50); 
-        draw_rect(10, 40, 15, 15, 11); draw_gui_string("NOTES", 35, 45, 0, 50); 
-        draw_rect(10, 60, 15, 15, 0); draw_gui_string("CMD", 35, 65, 0, 50); 
-        draw_rect(10, 80, 15, 15, 13); draw_gui_string("DISK", 35, 85, 0, 50); 
-        draw_rect(10, 100, 15, 15, 8); draw_gui_string("THEME", 35, 105, 0, 50); 
-        draw_rect(10, 120, 15, 15, 2); draw_gui_string("SYS", 35, 125, 0, 50); // NAYA MENU ITEM
-        draw_rect(10, 140, 15, 15, 1); draw_gui_string("CLOSE", 35, 145, 0, 50); 
-        draw_rect(10, 160, 15, 15, 4); draw_gui_string("REBOOT", 35, 165, 0, 50); 
+        // ----------------------------------------------------
+        // NAYA (DAY 83): WIDE DOUBLE-COLUMN START MENU
+        // ----------------------------------------------------
+        draw_rect(2, 90, 180, 85, 7); 
+        draw_gui_string("MENU", 10, 93, 0, 50);
+        
+        // Col 1
+        draw_rect(10, 105, 15, 15, 14); draw_gui_string("PAINT", 30, 110, 0, 50); 
+        draw_rect(10, 125, 15, 15, 11); draw_gui_string("NOTES", 30, 130, 0, 50); 
+        draw_rect(10, 145, 15, 15, 0); draw_gui_string("CMD", 30, 150, 0, 50); 
+        draw_rect(10, 165, 15, 15, 13); draw_gui_string("DISK", 30, 170, 0, 50); 
+        
+        // Col 2
+        draw_rect(90, 105, 15, 15, 8); draw_gui_string("THEME", 110, 110, 0, 50); 
+        draw_rect(90, 125, 15, 15, 2); draw_gui_string("SYS", 110, 130, 0, 50); 
+        draw_rect(90, 145, 15, 15, 3); draw_gui_string("CALC", 110, 150, 0, 50); // NAYA
+        draw_rect(90, 165, 15, 15, 4); draw_gui_string("CLOSE", 110, 170, 0, 50); 
     }
 }
 

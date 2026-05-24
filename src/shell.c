@@ -53,7 +53,7 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 81/82) - Task Manager & Optimized Loop
+    // ULTIMATE GUI COMMAND (DAY 83/84) - The Math Engine
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
@@ -63,26 +63,30 @@ void execute_command(char* command) {
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // 0=Desk, 1=PNT, 2=NOT, 3=CMD, 4=DSK, 5=THEME, 6=SYS
+        int app_mode = 0; // 0=Desk, 1=PNT, 2=NOT, 3=CMD, 4=DSK, 5=THEME, 6=SYS, 7=CALC
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
         int start_menu_open = 0; 
         
-        unsigned char bg_color = 1; 
-        unsigned char win_color = 9; 
+        unsigned char bg_color = 1; unsigned char win_color = 9; 
         
-        char note_text[512] = {0};
-        read_sector_lba28(10, (unsigned char*)note_text); 
-        int note_len = 0;
-        while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
+        char note_text[512] = {0}; read_sector_lba28(10, (unsigned char*)note_text); 
+        int note_len = 0; while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
         int note_saved = 0; 
         
         char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nSYSTEM MONITOR ACTIVE\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nMATH ENGINE ACTIVE\n------------------\n";
         
-        int current_lba = 10; 
-        char disk_buffer[512] = {0};
+        int current_lba = 10; char disk_buffer[512] = {0};
+        
+        // ----------------------------------------------------
+        // NAYA (DAY 84): CALCULATOR STATE VARIABLES
+        // ----------------------------------------------------
+        char calc_display[20] = "0";
+        int calc_op = 0; // 1:+, 2:-, 3:*, 4:/
+        int calc_num1 = 0;
+        int calc_new_num = 1; // Flag checking if we should clear screen for next num
         
         int gui_running = 1;
         while(gui_running) {
@@ -153,42 +157,47 @@ void execute_command(char* command) {
                     if (is_dragging) { win_x += (rel_x / 2); win_y -= (rel_y / 2); }
 
                     if (left_click && !is_dragging) {
+                        // Desktop Taskbar Menu Button
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { os_beep(1000, 1); start_menu_open = !start_menu_open; last_click_time = timer_ticks; }
                         }
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 5 && mouse_y <= 180) {
+                        // NAYA: WIDE START MENU CLICKS
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 90 && mouse_y <= 180) {
                             os_beep(1500, 2); 
-                            if (mouse_y >= 20 && mouse_y <= 35) { app_mode = 1; start_menu_open = 0; } 
-                            else if (mouse_y >= 40 && mouse_y <= 55) { app_mode = 2; start_menu_open = 0; } 
-                            else if (mouse_y >= 60 && mouse_y <= 75) { app_mode = 3; start_menu_open = 0; } 
-                            else if (mouse_y >= 80 && mouse_y <= 95) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
-                            else if (mouse_y >= 100 && mouse_y <= 115) { app_mode = 5; start_menu_open = 0; } 
-                            else if (mouse_y >= 120 && mouse_y <= 135) { app_mode = 6; start_menu_open = 0; } // SYS APP
-                            else if (mouse_y >= 140 && mouse_y <= 155) { app_mode = 0; start_menu_open = 0; } 
-                            else if (mouse_y >= 160 && mouse_y <= 175) { outb(0x64, 0xFE); } 
+                            // Column 1 (x: 10 to 80)
+                            if (mouse_x < 90) {
+                                if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 1; start_menu_open = 0; } 
+                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 2; start_menu_open = 0; } 
+                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 3; start_menu_open = 0; } 
+                                else if (mouse_y >= 165 && mouse_y <= 180) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
+                            } 
+                            // Column 2 (x: 90 to 180)
+                            else {
+                                if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 5; start_menu_open = 0; } 
+                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 6; start_menu_open = 0; } 
+                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 7; start_menu_open = 0; } // CALC
+                                else if (mouse_y >= 165 && mouse_y <= 180) { outb(0x64, 0xFE); } // REBOOT/CLOSE
+                            }
                         }
                         else if (start_menu_open) { start_menu_open = 0; }
                         else {
+                            // Desktop App Icons Clicks
                             if (app_mode == 0) { 
-                                if (mouse_x >= 10 && mouse_x <= 42 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 1; } last_click_time = timer_ticks;
-                                }
-                                else if (mouse_x >= 60 && mouse_x <= 92 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 2; } last_click_time = timer_ticks;
-                                }
-                                else if (mouse_x >= 110 && mouse_x <= 142 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 3; } last_click_time = timer_ticks;
-                                }
-                                else if (mouse_x >= 160 && mouse_x <= 192 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); app_mode = 4; } last_click_time = timer_ticks;
-                                }
-                                else if (mouse_x >= 210 && mouse_x <= 242 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 5; } last_click_time = timer_ticks;
-                                }
-                                else if (mouse_x >= 260 && mouse_x <= 292 && mouse_y >= 10 && mouse_y <= 42) {
-                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 6; } last_click_time = timer_ticks;
-                                }
+                                if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
+                                    if (mouse_y >= 10 && mouse_y <= 42) {
+                                        if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 1; }
+                                        else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 2; }
+                                        else if (mouse_x >= 110 && mouse_x <= 142) { os_beep(1500, 2); app_mode = 3; }
+                                        else if (mouse_x >= 160 && mouse_x <= 192) { os_beep(1500, 2); app_mode = 4; for(int i=0; i<512; i++){disk_buffer[i]=0;} read_sector_lba28(current_lba, (unsigned char*)disk_buffer); }
+                                        else if (mouse_x >= 210 && mouse_x <= 242) { os_beep(1500, 2); app_mode = 5; }
+                                        else if (mouse_x >= 260 && mouse_x <= 292) { os_beep(1500, 2); app_mode = 6; }
+                                    }
+                                    else if (mouse_y >= 60 && mouse_y <= 92) {
+                                        if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 7; } // CALC
+                                    }
+                                } last_click_time = timer_ticks;
                             }
+                            // Close Button Click
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
                             if (app_mode == 1) { 
@@ -196,12 +205,7 @@ void execute_command(char* command) {
                                     if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { init_paint_canvas(); }
                                 }
                                 if (mouse_x >= win_x + 2 && mouse_x <= win_x + 195 && mouse_y >= win_y + 17 && mouse_y <= win_y + 109) { 
-                                    for(int by=0; by<3; by++) {
-                                        for(int bx=0; bx<3; bx++) {
-                                            int cx = (mouse_x - (win_x + 2)) + bx; int cy = (mouse_y - (win_y + 17)) + by;
-                                            if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) { paint_canvas[(cy * 196) + cx] = brush_color; }
-                                        }
-                                    }
+                                    for(int by=0; by<3; by++) { for(int bx=0; bx<3; bx++) { int cx = (mouse_x - (win_x + 2)) + bx; int cy = (mouse_y - (win_y + 17)) + by; if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) { paint_canvas[(cy * 196) + cx] = brush_color; } } }
                                 }
                             }
                             else if (app_mode == 2) { 
@@ -211,12 +215,8 @@ void execute_command(char* command) {
                             }
                             else if (app_mode == 4) {
                                 if (mouse_y >= win_y + 19 && mouse_y <= win_y + 31) {
-                                    if (mouse_x >= win_x + 120 && mouse_x <= win_x + 150) {
-                                        if (current_lba > 0) { current_lba--; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); }
-                                    }
-                                    else if (mouse_x >= win_x + 160 && mouse_x <= win_x + 190) {
-                                        if (current_lba < 999) { current_lba++; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); }
-                                    }
+                                    if (mouse_x >= win_x + 120 && mouse_x <= win_x + 150) { if (current_lba > 0) { current_lba--; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } }
+                                    else if (mouse_x >= win_x + 160 && mouse_x <= win_x + 190) { if (current_lba < 999) { current_lba++; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } }
                                 }
                             }
                             else if (app_mode == 5) {
@@ -227,15 +227,76 @@ void execute_command(char* command) {
                                     if (mouse_x >= win_x + 10 && mouse_x <= win_x + 30) win_color = 9; else if (mouse_x >= win_x + 40 && mouse_x <= win_x + 60) win_color = 4; else if (mouse_x >= win_x + 70 && mouse_x <= win_x + 90) win_color = 2; else if (mouse_x >= win_x + 100 && mouse_x <= win_x + 120) win_color = 5;
                                 }
                             }
+                            // ----------------------------------------------------
+                            // NAYA (DAY 84): CALCULATOR CLICK ENGINE
+                            // ----------------------------------------------------
+                            else if (app_mode == 7) {
+                                if (timer_ticks - last_click_time > 10) { // Anti-bounce delay
+                                    int bx = -1, by = -1;
+                                    if(mouse_x >= win_x+15 && mouse_x <= win_x+50) bx = 0;
+                                    else if(mouse_x >= win_x+60 && mouse_x <= win_x+95) bx = 1;
+                                    else if(mouse_x >= win_x+105 && mouse_x <= win_x+140) bx = 2;
+                                    else if(mouse_x >= win_x+150 && mouse_x <= win_x+185) bx = 3;
+
+                                    if(mouse_y >= win_y+50 && mouse_y <= win_y+65) by = 0;
+                                    else if(mouse_y >= win_y+70 && mouse_y <= win_y+85) by = 1;
+                                    else if(mouse_y >= win_y+90 && mouse_y <= win_y+105) by = 2;
+                                    else if(mouse_y >= win_y+110 && mouse_y <= win_y+125) by = 3;
+
+                                    if(bx != -1 && by != -1) {
+                                        os_beep(1200, 1);
+                                        char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} };
+                                        char k = keys[by][bx];
+
+                                        if (k >= '0' && k <= '9') {
+                                            if (calc_new_num) { calc_display[0] = k; calc_display[1] = '\0'; calc_new_num = 0; } 
+                                            else {
+                                                int dlen = 0; while(calc_display[dlen]) dlen++;
+                                                if(dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; }
+                                            }
+                                        } 
+                                        else if (k == 'C') { calc_display[0] = '0'; calc_display[1] = '\0'; calc_num1 = 0; calc_op = 0; calc_new_num = 1; } 
+                                        else if (k == '+' || k == '-' || k == '*' || k == '/') {
+                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;}
+                                            while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
+                                            calc_num1 = val * sign;
+                                            calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4;
+                                            calc_new_num = 1;
+                                        } 
+                                        else if (k == '=') {
+                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;}
+                                            while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
+                                            int calc_num2 = val * sign;
+                                            int res = 0;
+                                            
+                                            if (calc_op == 1) res = calc_num1 + calc_num2;
+                                            else if (calc_op == 2) res = calc_num1 - calc_num2;
+                                            else if (calc_op == 3) res = calc_num1 * calc_num2;
+                                            else if (calc_op == 4) { if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; }
+
+                                            // Number to String
+                                            idx = 0;
+                                            if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } 
+                                            else {
+                                                int is_neg=0; if(res<0){is_neg=1; res=-res;}
+                                                char tmp[20]; int t=0;
+                                                while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; }
+                                                if(is_neg) tmp[t++]='-';
+                                                while(t>0){ calc_display[idx++] = tmp[--t]; }
+                                                calc_display[idx]='\0';
+                                            }
+                                            calc_new_num = 1; calc_op = 0;
+                                        }
+                                        last_click_time = timer_ticks;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // ----------------------------------------------------
-            // NAYA ENGINE: EK HI RENDER CALL, HAR FRAME PAR!
-            // ----------------------------------------------------
-            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks);
+            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display);
             int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
             draw_mouse_pointer(mouse_x, mouse_y);
             swap_buffers(); 
