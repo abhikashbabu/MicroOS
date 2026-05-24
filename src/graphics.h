@@ -86,9 +86,18 @@ void draw_gui_string(char* str, int start_x, int start_y, unsigned char color, i
 }
 
 // ----------------------------------------------------
-// NAYA (DAY 85): GAME BOARD PARAMETERS ADDED
+// NAYA (DAY 87/88): FILE LIST STR & SCREENSAVER PARAMS
 // ----------------------------------------------------
-void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks, char* calc_display, int* game_board, int game_winner) {
+void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks, char* calc_display, int* game_board, int game_winner, char* file_list_str, int ss_x, int ss_y) {
+    
+    // NAYA (DAY 88): SCREENSAVER RENDER LOGIC
+    if (app_mode == 99) {
+        clear_graphics(0); // Black Screen
+        draw_gui_string("MICRO OS", ss_x, ss_y, 14, 300);
+        draw_gui_string("V3.0 IDLE", ss_x-2, ss_y+10, 11, 300);
+        return; // Screensaver chal raha hai toh aur kuch draw mat karo
+    }
+
     clear_graphics(bg_color); 
     
     // Desktop Icons Row 1
@@ -101,9 +110,13 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
     
     // Desktop Icons Row 2
     draw_rect(10, 60, 32, 32, 9); draw_rect(14, 64, 24, 24, 3); draw_gui_string("+ -", 16, 70, 0, 100); draw_gui_string("CALC", 12, 95, 15, 100);
-    // NAYA ICON: GAME
     draw_rect(60, 60, 32, 32, 12); draw_rect(64, 64, 24, 24, 15); draw_gui_string("X O", 66, 70, 0, 100); draw_gui_string("GAME", 62, 95, 15, 100);
     
+    // NAYA ICON: FILE EXPLORER (Yellow Folder)
+    draw_rect(110, 60, 32, 32, 14); draw_rect(112, 62, 10, 5, 14); draw_rect(114, 66, 24, 22, 15); 
+    draw_gui_string("FILE", 112, 95, 15, 100);
+    
+    // Taskbar
     draw_rect(0, 180, 320, 20, 7); draw_rect(2, 182, 30, 16, 2); draw_gui_string("OS", 10, 187, 15, 100); 
     
     if (app_mode > 0) {
@@ -179,7 +192,6 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             draw_gui_string("RAM: 64KB VRAM ALLOCATED", win_x + 5, win_y + 60, 11, 190);
             draw_gui_string("PROCESS: 1 (GUI ENGINE)", win_x + 5, win_y + 75, 13, 190);
             draw_gui_string("STORAGE: ATA IDE PIO", win_x + 5, win_y + 90, 3, 190);
-            draw_gui_string("STATUS: STABLE", win_x + 5, win_y + 105, 2, 190);
         }
         else if (app_mode == 7) {
             draw_gui_string("CALCULATOR", win_x + 5, win_y + 5, 15, 180);
@@ -197,57 +209,54 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             }
         }
         else if (app_mode == 8) {
-            // ----------------------------------------------------
-            // NAYA (DAY 85): TIC-TAC-TOE GAME UI
-            // ----------------------------------------------------
             draw_gui_string("TIC-TAC-TOE", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 15); // White Game Board
-            
-            // Draw Grid Lines (Black)
-            draw_rect(win_x + 65, win_y + 25, 2, 90, 0); // V1
-            draw_rect(win_x + 105, win_y + 25, 2, 90, 0); // V2
-            draw_rect(win_x + 35, win_y + 55, 100, 2, 0); // H1
-            draw_rect(win_x + 35, win_y + 85, 100, 2, 0); // H2
-            
-            // Draw X and O
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 15); 
+            draw_rect(win_x + 65, win_y + 25, 2, 90, 0); draw_rect(win_x + 105, win_y + 25, 2, 90, 0); 
+            draw_rect(win_x + 35, win_y + 55, 100, 2, 0); draw_rect(win_x + 35, win_y + 85, 100, 2, 0); 
             for(int i = 0; i < 9; i++) {
-                int col = i % 3;
-                int row = i / 3;
-                int px = win_x + 45 + (col * 40);
-                int py = win_y + 35 + (row * 30);
-                if(game_board[i] == 1) draw_char('X', px, py, 4); // Red X
-                else if(game_board[i] == 2) draw_char('O', px, py, 1); // Blue O
+                int col = i % 3; int row = i / 3;
+                int px = win_x + 45 + (col * 40); int py = win_y + 35 + (row * 30);
+                if(game_board[i] == 1) draw_char('X', px, py, 4); 
+                else if(game_board[i] == 2) draw_char('O', px, py, 1); 
             }
-            
-            // Win Status Text
             if(game_winner == 1) draw_gui_string("PLAYER X WINS!", win_x + 40, win_y + 120, 4, 150);
             else if(game_winner == 2) draw_gui_string("PLAYER O WINS!", win_x + 40, win_y + 120, 1, 150);
             else if(game_winner == 3) draw_gui_string("IT'S A DRAW!", win_x + 45, win_y + 120, 0, 150);
+            draw_rect(win_x + 145, win_y + 115, 45, 12, 2); draw_gui_string("RESET", win_x + 150, win_y + 118, 15, 50);
+        }
+        else if (app_mode == 9) {
+            // ----------------------------------------------------
+            // NAYA (DAY 87): FILE EXPLORER UI
+            // ----------------------------------------------------
+            draw_gui_string("MICRO EXPLORER", win_x + 5, win_y + 5, 15, 180);
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 15); // White bg
             
-            // Reset Button
-            draw_rect(win_x + 145, win_y + 115, 45, 12, 2);
-            draw_gui_string("RESET", win_x + 150, win_y + 118, 15, 50);
+            draw_gui_string("C:/ROOT/HOME", win_x + 5, win_y + 22, 8, 190); // Path
+            draw_rect(win_x + 2, win_y + 32, 196, 2, 7); // Separator
+            
+            // Draw Dynamic File List
+            draw_gui_string(file_list_str, win_x + 10, win_y + 40, 0, 180);
         }
     }
 
     if (start_menu_open) {
-        // Taller Menu to fit 5 items per column
-        draw_rect(2, 70, 180, 105, 7); 
-        draw_gui_string("MENU", 10, 73, 0, 50);
+        // Taller Menu to fit 6 items per column
+        draw_rect(2, 50, 180, 125, 7); 
+        draw_gui_string("MENU", 10, 53, 0, 50);
         
         // Col 1
-        draw_rect(10, 85, 15, 15, 14); draw_gui_string("PAINT", 30, 90, 0, 50); 
-        draw_rect(10, 105, 15, 15, 11); draw_gui_string("NOTES", 30, 110, 0, 50); 
-        draw_rect(10, 125, 15, 15, 0); draw_gui_string("CMD", 30, 130, 0, 50); 
-        draw_rect(10, 145, 15, 15, 13); draw_gui_string("DISK", 30, 150, 0, 50); 
-        draw_rect(10, 165, 15, 15, 4); draw_gui_string("CLOSE", 30, 170, 0, 50); 
+        draw_rect(10, 65, 15, 15, 14); draw_gui_string("PAINT", 30, 70, 0, 50); 
+        draw_rect(10, 85, 15, 15, 11); draw_gui_string("NOTES", 30, 90, 0, 50); 
+        draw_rect(10, 105, 15, 15, 0); draw_gui_string("CMD", 30, 110, 0, 50); 
+        draw_rect(10, 125, 15, 15, 13); draw_gui_string("DISK", 30, 130, 0, 50); 
+        draw_rect(10, 145, 15, 15, 14); draw_gui_string("FILE", 30, 150, 0, 50); // NAYA
         
         // Col 2
-        draw_rect(90, 85, 15, 15, 8); draw_gui_string("THEME", 110, 90, 0, 50); 
-        draw_rect(90, 105, 15, 15, 2); draw_gui_string("SYS", 110, 110, 0, 50); 
-        draw_rect(90, 125, 15, 15, 3); draw_gui_string("CALC", 110, 130, 0, 50); 
-        draw_rect(90, 145, 15, 15, 12); draw_gui_string("GAME", 110, 150, 0, 50); // NAYA
-        draw_rect(90, 165, 15, 15, 4); draw_gui_string("REBOOT", 110, 170, 0, 50); 
+        draw_rect(90, 65, 15, 15, 8); draw_gui_string("THEME", 110, 70, 0, 50); 
+        draw_rect(90, 85, 15, 15, 2); draw_gui_string("SYS", 110, 90, 0, 50); 
+        draw_rect(90, 105, 15, 15, 3); draw_gui_string("CALC", 110, 110, 0, 50); 
+        draw_rect(90, 125, 15, 15, 12); draw_gui_string("GAME", 110, 130, 0, 50); 
+        draw_rect(90, 145, 15, 15, 4); draw_gui_string("REBOOT", 110, 150, 0, 50); 
     }
 }
 
