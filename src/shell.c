@@ -53,23 +53,20 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 79/80) - Persistent App States
+    // ULTIMATE GUI COMMAND (DAY 81/82) - Task Manager & Optimized Loop
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
-        
-        // NAYA: Paint Canvas ko default gray color se bharna
-        init_paint_canvas(); 
-        
+        init_paint_canvas();
         draw_boot_screen();
         os_beep(800, 3); os_beep(1200, 6);
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; 
+        int app_mode = 0; // 0=Desk, 1=PNT, 2=NOT, 3=CMD, 4=DSK, 5=THEME, 6=SYS
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
-        int brush_color = 0; // Ab ye finally array mein save hoga
+        int brush_color = 0; 
         int start_menu_open = 0; 
         
         unsigned char bg_color = 1; 
@@ -82,7 +79,7 @@ void execute_command(char* command) {
         int note_saved = 0; 
         
         char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nDOUBLE BUFFERING ACTIVE\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nSYSTEM MONITOR ACTIVE\n------------------\n";
         
         int current_lba = 10; 
         char disk_buffer[512] = {0};
@@ -159,15 +156,16 @@ void execute_command(char* command) {
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { os_beep(1000, 1); start_menu_open = !start_menu_open; last_click_time = timer_ticks; }
                         }
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 20 && mouse_y <= 180) {
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 122 && mouse_y >= 5 && mouse_y <= 180) {
                             os_beep(1500, 2); 
-                            if (mouse_y >= 35 && mouse_y <= 50) { app_mode = 1; start_menu_open = 0; } 
-                            else if (mouse_y >= 55 && mouse_y <= 70) { app_mode = 2; start_menu_open = 0; } 
-                            else if (mouse_y >= 75 && mouse_y <= 90) { app_mode = 3; start_menu_open = 0; } 
-                            else if (mouse_y >= 95 && mouse_y <= 110) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
-                            else if (mouse_y >= 115 && mouse_y <= 130) { app_mode = 5; start_menu_open = 0; } 
-                            else if (mouse_y >= 135 && mouse_y <= 150) { app_mode = 0; start_menu_open = 0; } 
-                            else if (mouse_y >= 155 && mouse_y <= 170) { outb(0x64, 0xFE); } 
+                            if (mouse_y >= 20 && mouse_y <= 35) { app_mode = 1; start_menu_open = 0; } 
+                            else if (mouse_y >= 40 && mouse_y <= 55) { app_mode = 2; start_menu_open = 0; } 
+                            else if (mouse_y >= 60 && mouse_y <= 75) { app_mode = 3; start_menu_open = 0; } 
+                            else if (mouse_y >= 80 && mouse_y <= 95) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
+                            else if (mouse_y >= 100 && mouse_y <= 115) { app_mode = 5; start_menu_open = 0; } 
+                            else if (mouse_y >= 120 && mouse_y <= 135) { app_mode = 6; start_menu_open = 0; } // SYS APP
+                            else if (mouse_y >= 140 && mouse_y <= 155) { app_mode = 0; start_menu_open = 0; } 
+                            else if (mouse_y >= 160 && mouse_y <= 175) { outb(0x64, 0xFE); } 
                         }
                         else if (start_menu_open) { start_menu_open = 0; }
                         else {
@@ -187,35 +185,21 @@ void execute_command(char* command) {
                                 else if (mouse_x >= 210 && mouse_x <= 242 && mouse_y >= 10 && mouse_y <= 42) {
                                     if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 5; } last_click_time = timer_ticks;
                                 }
+                                else if (mouse_x >= 260 && mouse_x <= 292 && mouse_y >= 10 && mouse_y <= 42) {
+                                    if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) { os_beep(1500, 2); app_mode = 6; } last_click_time = timer_ticks;
+                                }
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
-                            // ----------------------------------------------------
-                            // NAYA (DAY 80): PAINT VRAM WRITER
-                            // Ab dot direct VRAM memory mein save hoga
-                            // ----------------------------------------------------
                             if (app_mode == 1) { 
-                                // Color Selector & Clear
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
-                                    else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
-                                    else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
-                                    else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
-                                    else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
-                                    else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
-                                    else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { 
-                                        init_paint_canvas(); // Clear Dabaane par memory saaf kardo
-                                    }
+                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { init_paint_canvas(); }
                                 }
-                                // Drawing Logic
                                 if (mouse_x >= win_x + 2 && mouse_x <= win_x + 195 && mouse_y >= win_y + 17 && mouse_y <= win_y + 109) { 
                                     for(int by=0; by<3; by++) {
                                         for(int bx=0; bx<3; bx++) {
-                                            int cx = (mouse_x - (win_x + 2)) + bx;
-                                            int cy = (mouse_y - (win_y + 17)) + by;
-                                            if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) {
-                                                paint_canvas[(cy * 196) + cx] = brush_color;
-                                            }
+                                            int cx = (mouse_x - (win_x + 2)) + bx; int cy = (mouse_y - (win_y + 17)) + by;
+                                            if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) { paint_canvas[(cy * 196) + cx] = brush_color; }
                                         }
                                     }
                                 }
@@ -248,7 +232,10 @@ void execute_command(char* command) {
                 }
             }
 
-            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color);
+            // ----------------------------------------------------
+            // NAYA ENGINE: EK HI RENDER CALL, HAR FRAME PAR!
+            // ----------------------------------------------------
+            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks);
             int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
             draw_mouse_pointer(mouse_x, mouse_y);
             swap_buffers(); 
