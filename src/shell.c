@@ -53,7 +53,7 @@ void execute_command(char* command) {
     } 
 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 83/84) - The Math Engine
+    // ULTIMATE GUI COMMAND (DAY 85/86) - Tic-Tac-Toe Game!
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
@@ -63,7 +63,7 @@ void execute_command(char* command) {
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // 0=Desk, 1=PNT, 2=NOT, 3=CMD, 4=DSK, 5=THEME, 6=SYS, 7=CALC
+        int app_mode = 0; // 0=Desk, 1=PNT, 2=NOT, 3=CMD, 4=DSK, 5=THEME, 6=SYS, 7=CALC, 8=GAME
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
@@ -76,17 +76,18 @@ void execute_command(char* command) {
         int note_saved = 0; 
         
         char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nMATH ENGINE ACTIVE\n------------------\n";
+        char cmd_out[400] = "MICRO OS v3.0\nGAME ENGINE ACTIVE\n------------------\n";
         
         int current_lba = 10; char disk_buffer[512] = {0};
         
+        char calc_display[20] = "0"; int calc_op = 0; int calc_num1 = 0; int calc_new_num = 1; 
+        
         // ----------------------------------------------------
-        // NAYA (DAY 84): CALCULATOR STATE VARIABLES
+        // NAYA (DAY 86): GAME STATE VARIABLES
         // ----------------------------------------------------
-        char calc_display[20] = "0";
-        int calc_op = 0; // 1:+, 2:-, 3:*, 4:/
-        int calc_num1 = 0;
-        int calc_new_num = 1; // Flag checking if we should clear screen for next num
+        int game_board[9] = {0,0,0, 0,0,0, 0,0,0}; // 0=Empty, 1=X, 2=O
+        int game_turn = 1; // Player X starts
+        int game_winner = 0; // 0=None, 1=X, 2=O, 3=Draw
         
         int gui_running = 1;
         while(gui_running) {
@@ -157,31 +158,28 @@ void execute_command(char* command) {
                     if (is_dragging) { win_x += (rel_x / 2); win_y -= (rel_y / 2); }
 
                     if (left_click && !is_dragging) {
-                        // Desktop Taskbar Menu Button
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { os_beep(1000, 1); start_menu_open = !start_menu_open; last_click_time = timer_ticks; }
                         }
-                        // NAYA: WIDE START MENU CLICKS
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 90 && mouse_y <= 180) {
+                        // Start Menu Clicks
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 70 && mouse_y <= 180) {
                             os_beep(1500, 2); 
-                            // Column 1 (x: 10 to 80)
-                            if (mouse_x < 90) {
-                                if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 1; start_menu_open = 0; } 
-                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 2; start_menu_open = 0; } 
-                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 3; start_menu_open = 0; } 
-                                else if (mouse_y >= 165 && mouse_y <= 180) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
-                            } 
-                            // Column 2 (x: 90 to 180)
-                            else {
-                                if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 5; start_menu_open = 0; } 
-                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 6; start_menu_open = 0; } 
-                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 7; start_menu_open = 0; } // CALC
-                                else if (mouse_y >= 165 && mouse_y <= 180) { outb(0x64, 0xFE); } // REBOOT/CLOSE
+                            if (mouse_x < 90) { // Col 1
+                                if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 1; start_menu_open = 0; } 
+                                else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 2; start_menu_open = 0; } 
+                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 3; start_menu_open = 0; } 
+                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
+                                else if (mouse_y >= 165 && mouse_y <= 180) { app_mode = 0; start_menu_open = 0; } // CLOSE
+                            } else { // Col 2
+                                if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 5; start_menu_open = 0; } 
+                                else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 6; start_menu_open = 0; } 
+                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 7; start_menu_open = 0; } 
+                                else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 8; start_menu_open = 0; } // GAME
+                                else if (mouse_y >= 165 && mouse_y <= 180) { outb(0x64, 0xFE); } // REBOOT
                             }
                         }
                         else if (start_menu_open) { start_menu_open = 0; }
                         else {
-                            // Desktop App Icons Clicks
                             if (app_mode == 0) { 
                                 if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
                                     if (mouse_y >= 10 && mouse_y <= 42) {
@@ -194,10 +192,10 @@ void execute_command(char* command) {
                                     }
                                     else if (mouse_y >= 60 && mouse_y <= 92) {
                                         if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 7; } // CALC
+                                        else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 8; } // GAME
                                     }
                                 } last_click_time = timer_ticks;
                             }
-                            // Close Button Click
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
                             if (app_mode == 1) { 
@@ -227,67 +225,84 @@ void execute_command(char* command) {
                                     if (mouse_x >= win_x + 10 && mouse_x <= win_x + 30) win_color = 9; else if (mouse_x >= win_x + 40 && mouse_x <= win_x + 60) win_color = 4; else if (mouse_x >= win_x + 70 && mouse_x <= win_x + 90) win_color = 2; else if (mouse_x >= win_x + 100 && mouse_x <= win_x + 120) win_color = 5;
                                 }
                             }
-                            // ----------------------------------------------------
-                            // NAYA (DAY 84): CALCULATOR CLICK ENGINE
-                            // ----------------------------------------------------
                             else if (app_mode == 7) {
-                                if (timer_ticks - last_click_time > 10) { // Anti-bounce delay
+                                if (timer_ticks - last_click_time > 10) { 
                                     int bx = -1, by = -1;
-                                    if(mouse_x >= win_x+15 && mouse_x <= win_x+50) bx = 0;
-                                    else if(mouse_x >= win_x+60 && mouse_x <= win_x+95) bx = 1;
-                                    else if(mouse_x >= win_x+105 && mouse_x <= win_x+140) bx = 2;
-                                    else if(mouse_x >= win_x+150 && mouse_x <= win_x+185) bx = 3;
-
-                                    if(mouse_y >= win_y+50 && mouse_y <= win_y+65) by = 0;
-                                    else if(mouse_y >= win_y+70 && mouse_y <= win_y+85) by = 1;
-                                    else if(mouse_y >= win_y+90 && mouse_y <= win_y+105) by = 2;
-                                    else if(mouse_y >= win_y+110 && mouse_y <= win_y+125) by = 3;
+                                    if(mouse_x >= win_x+15 && mouse_x <= win_x+50) bx = 0; else if(mouse_x >= win_x+60 && mouse_x <= win_x+95) bx = 1; else if(mouse_x >= win_x+105 && mouse_x <= win_x+140) bx = 2; else if(mouse_x >= win_x+150 && mouse_x <= win_x+185) bx = 3;
+                                    if(mouse_y >= win_y+50 && mouse_y <= win_y+65) by = 0; else if(mouse_y >= win_y+70 && mouse_y <= win_y+85) by = 1; else if(mouse_y >= win_y+90 && mouse_y <= win_y+105) by = 2; else if(mouse_y >= win_y+110 && mouse_y <= win_y+125) by = 3;
 
                                     if(bx != -1 && by != -1) {
-                                        os_beep(1200, 1);
-                                        char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} };
-                                        char k = keys[by][bx];
-
+                                        os_beep(1200, 1); char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} }; char k = keys[by][bx];
                                         if (k >= '0' && k <= '9') {
                                             if (calc_new_num) { calc_display[0] = k; calc_display[1] = '\0'; calc_new_num = 0; } 
-                                            else {
-                                                int dlen = 0; while(calc_display[dlen]) dlen++;
-                                                if(dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; }
-                                            }
+                                            else { int dlen = 0; while(calc_display[dlen]) dlen++; if(dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; } }
                                         } 
                                         else if (k == 'C') { calc_display[0] = '0'; calc_display[1] = '\0'; calc_num1 = 0; calc_op = 0; calc_new_num = 1; } 
                                         else if (k == '+' || k == '-' || k == '*' || k == '/') {
-                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;}
-                                            while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
-                                            calc_num1 = val * sign;
-                                            calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4;
-                                            calc_new_num = 1;
+                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
+                                            calc_num1 = val * sign; calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4; calc_new_num = 1;
                                         } 
                                         else if (k == '=') {
-                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;}
-                                            while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
-                                            int calc_num2 = val * sign;
-                                            int res = 0;
-                                            
-                                            if (calc_op == 1) res = calc_num1 + calc_num2;
-                                            else if (calc_op == 2) res = calc_num1 - calc_num2;
-                                            else if (calc_op == 3) res = calc_num1 * calc_num2;
-                                            else if (calc_op == 4) { if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; }
-
-                                            // Number to String
-                                            idx = 0;
-                                            if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } 
+                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
+                                            int calc_num2 = val * sign; int res = 0;
+                                            if (calc_op == 1) res = calc_num1 + calc_num2; else if (calc_op == 2) res = calc_num1 - calc_num2; else if (calc_op == 3) res = calc_num1 * calc_num2; else if (calc_op == 4) { if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; }
+                                            idx = 0; if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } 
                                             else {
-                                                int is_neg=0; if(res<0){is_neg=1; res=-res;}
-                                                char tmp[20]; int t=0;
-                                                while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; }
-                                                if(is_neg) tmp[t++]='-';
-                                                while(t>0){ calc_display[idx++] = tmp[--t]; }
-                                                calc_display[idx]='\0';
+                                                int is_neg=0; if(res<0){is_neg=1; res=-res;} char tmp[20]; int t=0;
+                                                while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; } if(is_neg) tmp[t++]='-';
+                                                while(t>0){ calc_display[idx++] = tmp[--t]; } calc_display[idx]='\0';
                                             }
                                             calc_new_num = 1; calc_op = 0;
+                                        } last_click_time = timer_ticks;
+                                    }
+                                }
+                            }
+                            // ----------------------------------------------------
+                            // NAYA (DAY 86): GAME CLICK LOGIC
+                            // ----------------------------------------------------
+                            else if (app_mode == 8) {
+                                if (timer_ticks - last_click_time > 10) {
+                                    // Reset Button Check
+                                    if (mouse_x >= win_x + 145 && mouse_x <= win_x + 190 && mouse_y >= win_y + 115 && mouse_y <= win_y + 127) {
+                                        for(int i=0; i<9; i++) game_board[i] = 0;
+                                        game_winner = 0; game_turn = 1; os_beep(1000, 2); last_click_time = timer_ticks;
+                                    }
+                                    // Grid Click Check (Only if game not over)
+                                    else if (game_winner == 0) {
+                                        int col = -1, row = -1;
+                                        if(mouse_x >= win_x+35 && mouse_x <= win_x+65) col = 0;
+                                        else if(mouse_x > win_x+65 && mouse_x <= win_x+105) col = 1;
+                                        else if(mouse_x > win_x+105 && mouse_x <= win_x+135) col = 2;
+                                        
+                                        if(mouse_y >= win_y+25 && mouse_y <= win_y+55) row = 0;
+                                        else if(mouse_y > win_y+55 && mouse_y <= win_y+85) row = 1;
+                                        else if(mouse_y > win_y+85 && mouse_y <= win_y+115) row = 2;
+                                        
+                                        if(col != -1 && row != -1) {
+                                            int cell = (row * 3) + col;
+                                            if(game_board[cell] == 0) {
+                                                game_board[cell] = game_turn;
+                                                os_beep(1500, 1);
+                                                
+                                                // Check Win Logic
+                                                int w[8][3] = {{0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6}};
+                                                for(int i=0; i<8; i++) {
+                                                    if(game_board[w[i][0]] != 0 && game_board[w[i][0]] == game_board[w[i][1]] && game_board[w[i][1]] == game_board[w[i][2]]) {
+                                                        game_winner = game_board[w[i][0]];
+                                                        os_beep(2000, 4); // Win Sound!
+                                                    }
+                                                }
+                                                // Check Draw
+                                                if(game_winner == 0) {
+                                                    int full = 1;
+                                                    for(int i=0; i<9; i++) if(game_board[i] == 0) full = 0;
+                                                    if(full) game_winner = 3; // Draw
+                                                }
+                                                
+                                                game_turn = (game_turn == 1) ? 2 : 1;
+                                                last_click_time = timer_ticks;
+                                            }
                                         }
-                                        last_click_time = timer_ticks;
                                     }
                                 }
                             }
@@ -296,7 +311,7 @@ void execute_command(char* command) {
                 }
             }
 
-            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display);
+            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner);
             int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
             draw_mouse_pointer(mouse_x, mouse_y);
             swap_buffers(); 
