@@ -52,41 +52,30 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 91/92) - VRAM HDD Serialization (Fixed Lag!)
+    // ULTIMATE GUI COMMAND (DAY 93-95) - 12 Apps & Synth!
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
-        if (paint_canvas == 0) {
-            paint_canvas = (unsigned char*)kmalloc(18620);
-            init_paint_canvas();
-        }
-        if (gallery_canvas == 0) {
-            gallery_canvas = (unsigned char*)kmalloc(18620);
-        }
+        if (paint_canvas == 0) { paint_canvas = (unsigned char*)kmalloc(18620); init_paint_canvas(); }
+        if (gallery_canvas == 0) { gallery_canvas = (unsigned char*)kmalloc(18620); }
         
         draw_boot_screen();
         os_beep(800, 3); os_beep(1200, 6);
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; 
-        int is_dragging = 0;
-        unsigned int last_click_time = 0; 
-        int brush_color = 0; 
-        int start_menu_open = 0; 
+        int app_mode = 0; // 0..12
+        int is_dragging = 0; unsigned int last_click_time = 0; 
+        int brush_color = 0; int start_menu_open = 0; 
         
         unsigned char bg_color = 1; unsigned char win_color = 9; 
-        
         char note_text[512] = {0}; read_sector_lba28(10, (unsigned char*)note_text); 
         int note_len = 0; while(note_text[note_len] != '\0' && note_len < 199) { note_len++; }
         int note_saved = 0; 
         
-        char cmd_in[50] = {0}; int cmd_len = 0;
-        char cmd_out[400] = "MICRO OS v3.0\nSYSTEM ACTIVE\n------------------\n";
-        
+        char cmd_in[50] = {0}; int cmd_len = 0; char cmd_out[400] = "MICRO OS v3.0\nSYSTEM ACTIVE\n------------------\n";
         int current_lba = 10; char disk_buffer[512] = {0};
-        
         char calc_display[20] = "0"; int calc_op = 0; int calc_num1 = 0; int calc_new_num = 1; 
         int game_board[9] = {0,0,0, 0,0,0, 0,0,0}; int game_turn = 1; int game_winner = 0; 
         char file_list_str[400] = {0};
@@ -94,9 +83,23 @@ void execute_command(char* command) {
         unsigned int last_input_tick = timer_ticks; 
         int ss_x = 100, ss_y = 100; int ss_dx = 2, ss_dy = 2;  
         
+        // Piano variables
+        int playing_note = -1; // -1 means no note
+        
         int gui_running = 1;
         while(gui_running) {
             
+            // ----------------------------------------------------
+            // NAYA (DAY 93): READ CMOS HARDWARE DATE
+            // ----------------------------------------------------
+            outb(0x70, 0x07); unsigned char bcd_day = inb(0x71);
+            outb(0x70, 0x08); unsigned char bcd_mon = inb(0x71);
+            outb(0x70, 0x09); unsigned char bcd_year = inb(0x71);
+            // Convert BCD to standard Binary (Integer)
+            int d_day = (bcd_day & 0x0F) + ((bcd_day / 16) * 10);
+            int d_mon = (bcd_mon & 0x0F) + ((bcd_mon / 16) * 10);
+            int d_year = (bcd_year & 0x0F) + ((bcd_year / 16) * 10);
+
             unsigned char k_status = inb(0x64);
             if (k_status & 1) { 
                 if (!(k_status & 0x20)) { 
@@ -106,12 +109,26 @@ void execute_command(char* command) {
                     
                     if (scancode == 0x01) { outb(0x64, 0xFE); } 
                     
+                    // ----------------------------------------------------
+                    // NAYA (DAY 95): PIANO KEYBOARD SYNTHESIZER MAP
+                    // ----------------------------------------------------
+                    else if (app_mode == 12) {
+                        if (!(scancode & 0x80)) { // KEY PRESSED
+                            if(scancode == 0x1E) { play_sound(261); playing_note = 0; } // A -> C4
+                            else if(scancode == 0x1F) { play_sound(293); playing_note = 1; } // S -> D4
+                            else if(scancode == 0x20) { play_sound(329); playing_note = 2; } // D -> E4
+                            else if(scancode == 0x21) { play_sound(349); playing_note = 3; } // F -> F4
+                            else if(scancode == 0x22) { play_sound(392); playing_note = 4; } // G -> G4
+                            else if(scancode == 0x23) { play_sound(440); playing_note = 5; } // H -> A4
+                            else if(scancode == 0x24) { play_sound(493); playing_note = 6; } // J -> B4
+                        } else { // KEY RELEASED
+                            nosound(); playing_note = -1;
+                        }
+                    }
                     else if (app_mode == 2 && !(scancode & 0x80)) { 
                         if (scancode == 0x0E && note_len > 0) { note_text[--note_len] = '\0'; note_saved = 0; } 
                         else if (scancode == 0x39 && note_len < 199) { note_text[note_len++] = ' '; note_text[note_len] = '\0'; note_saved = 0; }
-                        else if (note_len < 199 && keyboard_map[scancode] != 0) {
-                            note_text[note_len++] = keyboard_map[scancode]; note_text[note_len] = '\0'; note_saved = 0; 
-                        }
+                        else if (note_len < 199 && keyboard_map[scancode] != 0) { note_text[note_len++] = keyboard_map[scancode]; note_text[note_len] = '\0'; note_saved = 0; }
                     }
                     else if (app_mode == 3 && !(scancode & 0x80)) {
                         if (scancode == 0x0E && cmd_len > 0) { cmd_in[--cmd_len] = '\0'; } 
@@ -119,24 +136,16 @@ void execute_command(char* command) {
                             int out_len = 0; while(cmd_out[out_len] != '\0') out_len++;
                             if (out_len > 300) { cmd_out[0] = '\0'; out_len = 0; }
                             cmd_out[out_len++] = '>'; cmd_out[out_len] = '\0';
-                            int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; }
-                            cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
+                            int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; } cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
                             
                             if (cmd_in[0] == 'l' && cmd_in[1] == 's') {
                                 if (file_count == 0) { char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; } 
-                                else {
-                                    for(int f = 0; f < file_count; f++) {
-                                        int k = 0; while(file_system[f].name[k] != '\0') cmd_out[out_len++] = file_system[f].name[k++];
-                                        cmd_out[out_len++] = ' ';
-                                    } cmd_out[out_len++] = '\n';
-                                }
+                                else { for(int f = 0; f < file_count; f++) { int k = 0; while(file_system[f].name[k] != '\0') cmd_out[out_len++] = file_system[f].name[k++]; cmd_out[out_len++] = ' '; } cmd_out[out_len++] = '\n'; }
                             }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') {
                                 int f_idx = find_file(&cmd_in[4]);
-                                if (f_idx != -1) {
-                                    int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++];
-                                    cmd_out[out_len++] = '\n';
-                                } else { char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
+                                if (f_idx != -1) { int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++]; cmd_out[out_len++] = '\n'; } 
+                                else { char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
                             }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='l') { cmd_out[0] = '\0'; out_len = 0; }
                             else { char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; }
@@ -169,26 +178,25 @@ void execute_command(char* command) {
                         if (mouse_x >= 2 && mouse_x <= 32 && mouse_y >= 182 && mouse_y <= 198) {
                             if (timer_ticks - last_click_time > 10) { os_beep(1000, 1); start_menu_open = !start_menu_open; last_click_time = timer_ticks; }
                         }
-                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 50 && mouse_y <= 180) {
+                        else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 30 && mouse_y <= 180) {
                             if (timer_ticks - last_click_time > 10) {
                                 os_beep(1500, 2); 
                                 if (mouse_x < 90) { 
-                                    if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 1; start_menu_open = 0; } 
-                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 2; start_menu_open = 0; } 
-                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 3; start_menu_open = 0; } 
-                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
-                                    else if (mouse_y >= 145 && mouse_y <= 160) { 
-                                        app_mode = 9; start_menu_open = 0; int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; 
-                                    } 
+                                    if (mouse_y >= 45 && mouse_y <= 60) { app_mode = 1; start_menu_open = 0; } 
+                                    else if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 2; start_menu_open = 0; } 
+                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 3; start_menu_open = 0; } 
+                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
+                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 9; start_menu_open = 0; int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; } 
+                                    else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 11; start_menu_open = 0; } // TIME
+                                    else if (mouse_y >= 165 && mouse_y <= 180) { app_mode = 0; start_menu_open = 0; } 
                                 } else { 
-                                    if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 5; start_menu_open = 0; } 
-                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 6; start_menu_open = 0; } 
-                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 7; start_menu_open = 0; } 
-                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 8; start_menu_open = 0; } 
-                                    else if (mouse_y >= 145 && mouse_y <= 160) { 
-                                        app_mode = 10; start_menu_open = 0; 
-                                        for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); }
-                                    } 
+                                    if (mouse_y >= 45 && mouse_y <= 60) { app_mode = 5; start_menu_open = 0; } 
+                                    else if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 6; start_menu_open = 0; } 
+                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 7; start_menu_open = 0; } 
+                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 8; start_menu_open = 0; } 
+                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 10; start_menu_open = 0; for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); } } 
+                                    else if (mouse_y >= 145 && mouse_y <= 160) { app_mode = 12; start_menu_open = 0; } // TUNE
+                                    else if (mouse_y >= 165 && mouse_y <= 180) { outb(0x64, 0xFE); } 
                                 }
                                 last_click_time = timer_ticks;
                             }
@@ -196,7 +204,7 @@ void execute_command(char* command) {
                         else if (start_menu_open) { start_menu_open = 0; }
                         else {
                             if (app_mode == 0) { 
-                                if (timer_ticks - last_click_time > 0 && timer_ticks - last_click_time < 20) {
+                                if (timer_ticks - last_click_time > 10) {
                                     if (mouse_y >= 10 && mouse_y <= 42) {
                                         if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 1; }
                                         else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 2; }
@@ -208,56 +216,29 @@ void execute_command(char* command) {
                                     else if (mouse_y >= 60 && mouse_y <= 92) {
                                         if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 7; } 
                                         else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 8; }
-                                        else if (mouse_x >= 110 && mouse_x <= 142) { 
-                                            os_beep(1500, 2); app_mode = 9; 
-                                            int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; 
-                                        } 
-                                        else if (mouse_x >= 160 && mouse_x <= 192) { 
-                                            os_beep(1500, 2); app_mode = 10; 
-                                            for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); }
-                                        }
+                                        else if (mouse_x >= 110 && mouse_x <= 142) { os_beep(1500, 2); app_mode = 9; int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; } 
+                                        else if (mouse_x >= 160 && mouse_x <= 192) { os_beep(1500, 2); app_mode = 10; for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); } }
+                                        else if (mouse_x >= 210 && mouse_x <= 242) { os_beep(1500, 2); app_mode = 11; } // TIME
+                                        else if (mouse_x >= 260 && mouse_x <= 292) { os_beep(1500, 2); app_mode = 12; } // TUNE
                                     }
-                                } last_click_time = timer_ticks;
+                                    last_click_time = timer_ticks;
+                                } 
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
                             if (app_mode == 1 && paint_canvas != 0) { 
-                                // ----------------------------------------------------
-                                // PAINT BUTTONS (ANTI-LAG FIX APPLIED HERE)
-                                // ----------------------------------------------------
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (timer_ticks - last_click_time > 10) { // <--- DEBOUNCE TIMER
-                                        if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
-                                        else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
-                                        else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
-                                        else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
-                                        else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
-                                        else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
-                                        // CLEAR
+                                    if (timer_ticks - last_click_time > 10) { 
+                                        if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
                                         else if (mouse_x >= win_x + 130 && mouse_x <= win_x + 155) { init_paint_canvas(); }
-                                        // SAVE TO DISK
-                                       // ----------------------------------------------------
-                                        // SAVE TO DISK (WITH LOADING UI & TURBO ENGINE)
-                                        // ----------------------------------------------------
                                         else if (mouse_x >= win_x + 160 && mouse_x <= win_x + 195) { 
-                                            // 1. Force the screen to show "WAIT" so user knows it's saving
-                                            draw_rect(win_x + 160, win_y + 116, 35, 15, 14); // Yellow box
-                                            draw_gui_string("WAIT", win_x + 163, win_y + 121, 0, 50);
-                                            swap_buffers(); // Force update screen before locking disk
-                                            
-                                            // 2. Perform the super-fast disk write
-                                            for(int s=0; s<37; s++) {
-                                                write_sector_lba28(20 + s, paint_canvas + (s * 512));
-                                            }
+                                            draw_rect(win_x + 160, win_y + 116, 35, 15, 14); draw_gui_string("WAIT", win_x + 163, win_y + 121, 0, 50); swap_buffers();
+                                            for(int s=0; s<37; s++) { write_sector_lba28(20 + s, paint_canvas + (s * 512)); }
                                             if (find_file("DRAWING.BMP") == -1) create_file("DRAWING.BMP", "IMG DATA");
-                                            
-                                            // 3. Done!
                                             os_beep(2000, 2);
-                                        }
-                                        last_click_time = timer_ticks;
+                                        } last_click_time = timer_ticks; 
                                     }
                                 }
-                                // DRAWING LOGIC (No delay here, so drawing is continuous and smooth)
                                 if (mouse_x >= win_x + 2 && mouse_x <= win_x + 195 && mouse_y >= win_y + 17 && mouse_y <= win_y + 109) { 
                                     for(int by=0; by<3; by++) { for(int bx=0; bx<3; bx++) { int cx = (mouse_x - (win_x + 2)) + bx; int cy = (mouse_y - (win_y + 17)) + by; if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) { paint_canvas[(cy * 196) + cx] = brush_color; } } }
                                 }
@@ -329,19 +310,14 @@ void execute_command(char* command) {
             }
 
             if (timer_ticks - last_input_tick > 150) {
-                app_mode = 99; 
-                ss_x += ss_dx; ss_y += ss_dy;
+                app_mode = 99; ss_x += ss_dx; ss_y += ss_dy;
                 if (ss_x <= 0 || ss_x >= 280) ss_dx = -ss_dx;
                 if (ss_y <= 0 || ss_y >= 190) ss_dy = -ss_dy;
             }
 
-            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner, file_list_str, ss_x, ss_y, get_used_memory());
+            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner, file_list_str, ss_x, ss_y, get_used_memory(), d_day, d_mon, d_year, playing_note);
             
-            if (app_mode != 99) {
-                int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
-                draw_mouse_pointer(mouse_x, mouse_y);
-            }
-            
+            if (app_mode != 99) { int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); draw_mouse_pointer(mouse_x, mouse_y); }
             swap_buffers(); 
         }
         init_vga_graphics(); outb(0x64, 0xFE); 
