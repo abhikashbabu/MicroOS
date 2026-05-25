@@ -51,19 +51,24 @@ void execute_command(char* command) {
         print_string("Built for the .ind ecosystem.\n");
         print_string("Developer: Abhikash\n");
     } 
-
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 87/88) - Explorer & Screensaver
+    // ULTIMATE GUI COMMAND (DAY 89/90) - Real Kernel Memory
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
-        init_paint_canvas();
+        
+        // NAYA: Tumhare asli memory.c se kmalloc() use kar rahe hain
+        if (paint_canvas == 0) {
+            paint_canvas = (unsigned char*)kmalloc(18620); // 196x95 bytes allocation!
+            init_paint_canvas();
+        }
+        
         draw_boot_screen();
         os_beep(800, 3); os_beep(1200, 6);
         for(volatile int delay = 0; delay < 60000000; delay++) {} 
         
         int win_x = 50, win_y = 40;
-        int app_mode = 0; // 9=FILE, 99=SCREENSAVER
+        int app_mode = 0; 
         int is_dragging = 0;
         unsigned int last_click_time = 0; 
         int brush_color = 0; 
@@ -82,15 +87,10 @@ void execute_command(char* command) {
         
         char calc_display[20] = "0"; int calc_op = 0; int calc_num1 = 0; int calc_new_num = 1; 
         int game_board[9] = {0,0,0, 0,0,0, 0,0,0}; int game_turn = 1; int game_winner = 0; 
-        
-        // ----------------------------------------------------
-        // NAYA (DAY 87/88): NEW VARIABLES
-        // ----------------------------------------------------
         char file_list_str[400] = {0};
         
-        unsigned int last_input_tick = timer_ticks; // Idle Tracker
-        int ss_x = 100, ss_y = 100; // Screensaver pos
-        int ss_dx = 2, ss_dy = 2;   // Screensaver speed
+        unsigned int last_input_tick = timer_ticks; 
+        int ss_x = 100, ss_y = 100; int ss_dx = 2, ss_dy = 2;  
         
         int gui_running = 1;
         while(gui_running) {
@@ -99,8 +99,6 @@ void execute_command(char* command) {
             if (k_status & 1) { 
                 if (!(k_status & 0x20)) { 
                     unsigned char scancode = inb(0x60); 
-                    
-                    // ANY KEY PRESS WAKES UP OS
                     last_input_tick = timer_ticks;
                     if(app_mode == 99) app_mode = 0;
                     
@@ -155,7 +153,7 @@ void execute_command(char* command) {
 
                     if(rel_x != 0 || rel_y != 0 || left_click) {
                         last_input_tick = timer_ticks;
-                        if(app_mode == 99) app_mode = 0; // WAKE UP ON MOUSE MOVE
+                        if(app_mode == 99) app_mode = 0; 
                     }
 
                     mouse_x += (rel_x / 2); mouse_y -= (rel_y / 2);
@@ -176,29 +174,20 @@ void execute_command(char* command) {
                         }
                         else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 50 && mouse_y <= 180) {
                             os_beep(1500, 2); 
-                            if (mouse_x < 90) { // Col 1
+                            if (mouse_x < 90) { 
                                 if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 1; start_menu_open = 0; } 
                                 else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 2; start_menu_open = 0; } 
                                 else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 3; start_menu_open = 0; } 
                                 else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
                                 else if (mouse_y >= 145 && mouse_y <= 160) { 
-                                    // ----------------------------------------------------
-                                    // NAYA (DAY 87): GENERATE FILE LIST STRING
-                                    // ----------------------------------------------------
                                     app_mode = 9; start_menu_open = 0; 
                                     int f_len = 0; char* hdr = "NAME        SIZE\n----------------\n";
                                     while(hdr[f_len]) { file_list_str[f_len] = hdr[f_len]; f_len++; }
-                                    if(file_count == 0) {
-                                        char* nf = "NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++] = nf[k++];
-                                    } else {
-                                        for(int f=0; f<file_count; f++) {
-                                            int k=0; while(file_system[f].name[k]) file_list_str[f_len++] = file_system[f].name[k++];
-                                            file_list_str[f_len++] = ' '; file_list_str[f_len++] = ' '; file_list_str[f_len++] = '4'; file_list_str[f_len++] = 'K'; file_list_str[f_len++] = 'B'; file_list_str[f_len++] = '\n';
-                                        }
-                                    }
+                                    if(file_count == 0) { char* nf = "NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++] = nf[k++]; } 
+                                    else { for(int f=0; f<file_count; f++) { int k=0; while(file_system[f].name[k]) file_list_str[f_len++] = file_system[f].name[k++]; file_list_str[f_len++] = ' '; file_list_str[f_len++] = ' '; file_list_str[f_len++] = '4'; file_list_str[f_len++] = 'K'; file_list_str[f_len++] = 'B'; file_list_str[f_len++] = '\n'; } }
                                     file_list_str[f_len] = '\0';
                                 } 
-                            } else { // Col 2
+                            } else { 
                                 if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 5; start_menu_open = 0; } 
                                 else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 6; start_menu_open = 0; } 
                                 else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 7; start_menu_open = 0; } 
@@ -222,7 +211,6 @@ void execute_command(char* command) {
                                         if (mouse_x >= 10 && mouse_x <= 42) { os_beep(1500, 2); app_mode = 7; } 
                                         else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 8; }
                                         else if (mouse_x >= 110 && mouse_x <= 142) { 
-                                            // Desktop File Explorer Click
                                             os_beep(1500, 2); app_mode = 9; 
                                             int f_len = 0; char* hdr = "NAME        SIZE\n----------------\n";
                                             while(hdr[f_len]) { file_list_str[f_len] = hdr[f_len]; f_len++; }
@@ -235,7 +223,7 @@ void execute_command(char* command) {
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
-                            if (app_mode == 1) { 
+                            if (app_mode == 1 && paint_canvas != 0) { 
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
                                     if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { init_paint_canvas(); }
                                 }
@@ -321,21 +309,16 @@ void execute_command(char* command) {
                 }
             }
 
-            // ----------------------------------------------------
-            // NAYA (DAY 88): IDLE CHECK (SCREENSAVER LOGIC)
-            // Agar 50 timer ticks (approx 5-10 sec) tak input nahi mila toh
-            // ----------------------------------------------------
             if (timer_ticks - last_input_tick > 150) {
-                app_mode = 99; // Enter Screensaver Mode
+                app_mode = 99; 
                 ss_x += ss_dx; ss_y += ss_dy;
-                // Screen Bounce Logic
                 if (ss_x <= 0 || ss_x >= 280) ss_dx = -ss_dx;
                 if (ss_y <= 0 || ss_y >= 190) ss_dy = -ss_dy;
             }
 
-            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner, file_list_str, ss_x, ss_y);
+            // NAYA: Tumhare memory.c ka function - get_used_memory() lagaya hai
+            draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner, file_list_str, ss_x, ss_y, get_used_memory());
             
-            // Sirf desktop mode mein pointer aur clock draw karo
             if (app_mode != 99) {
                 int h, m, s; get_time(&h, &m, &s); draw_gui_time(h, m); 
                 draw_mouse_pointer(mouse_x, mouse_y);
