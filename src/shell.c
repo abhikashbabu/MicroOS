@@ -52,15 +52,17 @@ void execute_command(char* command) {
         print_string("Developer: Abhikash\n");
     } 
 // --------------------------------------------------------
-    // ULTIMATE GUI COMMAND (DAY 89/90) - Real Kernel Memory
+    // ULTIMATE GUI COMMAND (DAY 91/92) - VRAM HDD Serialization (Fixed Lag!)
     // --------------------------------------------------------
     else if (strcmp(command, "gui") == 0) {
         init_vga_graphics(); 
         
-        // NAYA: Tumhare asli memory.c se kmalloc() use kar rahe hain
         if (paint_canvas == 0) {
-            paint_canvas = (unsigned char*)kmalloc(18620); // 196x95 bytes allocation!
+            paint_canvas = (unsigned char*)kmalloc(18620);
             init_paint_canvas();
+        }
+        if (gallery_canvas == 0) {
+            gallery_canvas = (unsigned char*)kmalloc(18620);
         }
         
         draw_boot_screen();
@@ -151,19 +153,14 @@ void execute_command(char* command) {
                     int rel_x = mouse_bytes[1] - ((mouse_bytes[0] << 4) & 0x100); int rel_y = mouse_bytes[2] - ((mouse_bytes[0] << 3) & 0x100);
                     int left_click = mouse_bytes[0] & 1;
 
-                    if(rel_x != 0 || rel_y != 0 || left_click) {
-                        last_input_tick = timer_ticks;
-                        if(app_mode == 99) app_mode = 0; 
-                    }
+                    if(rel_x != 0 || rel_y != 0 || left_click) { last_input_tick = timer_ticks; if(app_mode == 99) app_mode = 0; }
 
                     mouse_x += (rel_x / 2); mouse_y -= (rel_y / 2);
                     if (mouse_x < 0) { mouse_x = 0; } if (mouse_x > 313) { mouse_x = 313; }
                     if (mouse_y < 0) { mouse_y = 0; } if (mouse_y > 193) { mouse_y = 193; }
 
                     if (left_click) {
-                        if (app_mode > 0 && app_mode != 99 && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) {
-                            start_menu_open = 0; is_dragging = 1;
-                        }
+                        if (app_mode > 0 && app_mode != 99 && !is_dragging && mouse_x >= win_x && mouse_x <= win_x + 180 && mouse_y >= win_y && mouse_y <= win_y + 15) { start_menu_open = 0; is_dragging = 1; }
                     } else { is_dragging = 0; }
 
                     if (is_dragging) { win_x += (rel_x / 2); win_y -= (rel_y / 2); }
@@ -173,26 +170,27 @@ void execute_command(char* command) {
                             if (timer_ticks - last_click_time > 10) { os_beep(1000, 1); start_menu_open = !start_menu_open; last_click_time = timer_ticks; }
                         }
                         else if (start_menu_open && mouse_x >= 2 && mouse_x <= 182 && mouse_y >= 50 && mouse_y <= 180) {
-                            os_beep(1500, 2); 
-                            if (mouse_x < 90) { 
-                                if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 1; start_menu_open = 0; } 
-                                else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 2; start_menu_open = 0; } 
-                                else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 3; start_menu_open = 0; } 
-                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
-                                else if (mouse_y >= 145 && mouse_y <= 160) { 
-                                    app_mode = 9; start_menu_open = 0; 
-                                    int f_len = 0; char* hdr = "NAME        SIZE\n----------------\n";
-                                    while(hdr[f_len]) { file_list_str[f_len] = hdr[f_len]; f_len++; }
-                                    if(file_count == 0) { char* nf = "NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++] = nf[k++]; } 
-                                    else { for(int f=0; f<file_count; f++) { int k=0; while(file_system[f].name[k]) file_list_str[f_len++] = file_system[f].name[k++]; file_list_str[f_len++] = ' '; file_list_str[f_len++] = ' '; file_list_str[f_len++] = '4'; file_list_str[f_len++] = 'K'; file_list_str[f_len++] = 'B'; file_list_str[f_len++] = '\n'; } }
-                                    file_list_str[f_len] = '\0';
-                                } 
-                            } else { 
-                                if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 5; start_menu_open = 0; } 
-                                else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 6; start_menu_open = 0; } 
-                                else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 7; start_menu_open = 0; } 
-                                else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 8; start_menu_open = 0; } 
-                                else if (mouse_y >= 145 && mouse_y <= 160) { outb(0x64, 0xFE); } 
+                            if (timer_ticks - last_click_time > 10) {
+                                os_beep(1500, 2); 
+                                if (mouse_x < 90) { 
+                                    if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 1; start_menu_open = 0; } 
+                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 2; start_menu_open = 0; } 
+                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 3; start_menu_open = 0; } 
+                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 4; start_menu_open = 0; for(int i=0; i<512; i++) { disk_buffer[i]=0; } read_sector_lba28(current_lba, (unsigned char*)disk_buffer); } 
+                                    else if (mouse_y >= 145 && mouse_y <= 160) { 
+                                        app_mode = 9; start_menu_open = 0; int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; 
+                                    } 
+                                } else { 
+                                    if (mouse_y >= 65 && mouse_y <= 80) { app_mode = 5; start_menu_open = 0; } 
+                                    else if (mouse_y >= 85 && mouse_y <= 100) { app_mode = 6; start_menu_open = 0; } 
+                                    else if (mouse_y >= 105 && mouse_y <= 120) { app_mode = 7; start_menu_open = 0; } 
+                                    else if (mouse_y >= 125 && mouse_y <= 140) { app_mode = 8; start_menu_open = 0; } 
+                                    else if (mouse_y >= 145 && mouse_y <= 160) { 
+                                        app_mode = 10; start_menu_open = 0; 
+                                        for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); }
+                                    } 
+                                }
+                                last_click_time = timer_ticks;
                             }
                         }
                         else if (start_menu_open) { start_menu_open = 0; }
@@ -212,21 +210,54 @@ void execute_command(char* command) {
                                         else if (mouse_x >= 60 && mouse_x <= 92) { os_beep(1500, 2); app_mode = 8; }
                                         else if (mouse_x >= 110 && mouse_x <= 142) { 
                                             os_beep(1500, 2); app_mode = 9; 
-                                            int f_len = 0; char* hdr = "NAME        SIZE\n----------------\n";
-                                            while(hdr[f_len]) { file_list_str[f_len] = hdr[f_len]; f_len++; }
-                                            if(file_count == 0) { char* nf = "NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++] = nf[k++]; } 
-                                            else { for(int f=0; f<file_count; f++) { int k=0; while(file_system[f].name[k]) file_list_str[f_len++] = file_system[f].name[k++]; file_list_str[f_len++] = ' '; file_list_str[f_len++] = ' '; file_list_str[f_len++] = '4'; file_list_str[f_len++] = 'K'; file_list_str[f_len++] = 'B'; file_list_str[f_len++] = '\n'; } }
-                                            file_list_str[f_len] = '\0';
+                                            int f_len=0; char* hdr="NAME        SIZE\n----------------\n"; while(hdr[f_len]){file_list_str[f_len]=hdr[f_len]; f_len++;} if(file_count==0){char* nf="NO FILES SAVED"; int k=0; while(nf[k]) file_list_str[f_len++]=nf[k++];} else {for(int f=0; f<file_count; f++){int k=0; while(file_system[f].name[k]) file_list_str[f_len++]=file_system[f].name[k++]; file_list_str[f_len++]=' '; file_list_str[f_len++]='4'; file_list_str[f_len++]='K'; file_list_str[f_len++]='B'; file_list_str[f_len++]='\n';}} file_list_str[f_len]='\0'; 
                                         } 
+                                        else if (mouse_x >= 160 && mouse_x <= 192) { 
+                                            os_beep(1500, 2); app_mode = 10; 
+                                            for(int s=0; s<37; s++) { read_sector_lba28(20 + s, gallery_canvas + (s * 512)); }
+                                        }
                                     }
                                 } last_click_time = timer_ticks;
                             }
                             if (app_mode > 0 && mouse_x >= win_x + 185 && mouse_x <= win_x + 197 && mouse_y >= win_y + 2 && mouse_y <= win_y + 13) { app_mode = 0; }
                             
                             if (app_mode == 1 && paint_canvas != 0) { 
+                                // ----------------------------------------------------
+                                // PAINT BUTTONS (ANTI-LAG FIX APPLIED HERE)
+                                // ----------------------------------------------------
                                 if (mouse_y >= win_y + 116 && mouse_y <= win_y + 131) {
-                                    if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; else if (mouse_x >= win_x + 135 && mouse_x <= win_x + 175) { init_paint_canvas(); }
+                                    if (timer_ticks - last_click_time > 10) { // <--- DEBOUNCE TIMER
+                                        if (mouse_x >= win_x + 5 && mouse_x <= win_x + 20) brush_color = 0; 
+                                        else if (mouse_x >= win_x + 25 && mouse_x <= win_x + 40) brush_color = 4; 
+                                        else if (mouse_x >= win_x + 45 && mouse_x <= win_x + 60) brush_color = 2; 
+                                        else if (mouse_x >= win_x + 65 && mouse_x <= win_x + 80) brush_color = 1; 
+                                        else if (mouse_x >= win_x + 85 && mouse_x <= win_x + 100) brush_color = 14; 
+                                        else if (mouse_x >= win_x + 105 && mouse_x <= win_x + 120) brush_color = 7; 
+                                        // CLEAR
+                                        else if (mouse_x >= win_x + 130 && mouse_x <= win_x + 155) { init_paint_canvas(); }
+                                        // SAVE TO DISK
+                                       // ----------------------------------------------------
+                                        // SAVE TO DISK (WITH LOADING UI & TURBO ENGINE)
+                                        // ----------------------------------------------------
+                                        else if (mouse_x >= win_x + 160 && mouse_x <= win_x + 195) { 
+                                            // 1. Force the screen to show "WAIT" so user knows it's saving
+                                            draw_rect(win_x + 160, win_y + 116, 35, 15, 14); // Yellow box
+                                            draw_gui_string("WAIT", win_x + 163, win_y + 121, 0, 50);
+                                            swap_buffers(); // Force update screen before locking disk
+                                            
+                                            // 2. Perform the super-fast disk write
+                                            for(int s=0; s<37; s++) {
+                                                write_sector_lba28(20 + s, paint_canvas + (s * 512));
+                                            }
+                                            if (find_file("DRAWING.BMP") == -1) create_file("DRAWING.BMP", "IMG DATA");
+                                            
+                                            // 3. Done!
+                                            os_beep(2000, 2);
+                                        }
+                                        last_click_time = timer_ticks;
+                                    }
                                 }
+                                // DRAWING LOGIC (No delay here, so drawing is continuous and smooth)
                                 if (mouse_x >= win_x + 2 && mouse_x <= win_x + 195 && mouse_y >= win_y + 17 && mouse_y <= win_y + 109) { 
                                     for(int by=0; by<3; by++) { for(int bx=0; bx<3; bx++) { int cx = (mouse_x - (win_x + 2)) + bx; int cy = (mouse_y - (win_y + 17)) + by; if(cx >= 0 && cx < 196 && cy >= 0 && cy < 95) { paint_canvas[(cy * 196) + cx] = brush_color; } } }
                                 }
@@ -259,24 +290,14 @@ void execute_command(char* command) {
                                     if(bx != -1 && by != -1) {
                                         os_beep(1200, 1); char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} }; char k = keys[by][bx];
                                         if (k >= '0' && k <= '9') {
-                                            if (calc_new_num) { calc_display[0] = k; calc_display[1] = '\0'; calc_new_num = 0; } 
-                                            else { int dlen = 0; while(calc_display[dlen]) dlen++; if(dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; } }
+                                            if (calc_new_num) { calc_display[0] = k; calc_display[1] = '\0'; calc_new_num = 0; } else { int dlen = 0; while(calc_display[dlen]) dlen++; if(dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; } }
                                         } 
                                         else if (k == 'C') { calc_display[0] = '0'; calc_display[1] = '\0'; calc_num1 = 0; calc_op = 0; calc_new_num = 1; } 
-                                        else if (k == '+' || k == '-' || k == '*' || k == '/') {
-                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
-                                            calc_num1 = val * sign; calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4; calc_new_num = 1;
-                                        } 
+                                        else if (k == '+' || k == '-' || k == '*' || k == '/') { int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} calc_num1 = val * sign; calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4; calc_new_num = 1; } 
                                         else if (k == '=') {
-                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;}
-                                            int calc_num2 = val * sign; int res = 0;
+                                            int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} int calc_num2 = val * sign; int res = 0;
                                             if (calc_op == 1) res = calc_num1 + calc_num2; else if (calc_op == 2) res = calc_num1 - calc_num2; else if (calc_op == 3) res = calc_num1 * calc_num2; else if (calc_op == 4) { if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; }
-                                            idx = 0; if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } 
-                                            else {
-                                                int is_neg=0; if(res<0){is_neg=1; res=-res;} char tmp[20]; int t=0;
-                                                while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; } if(is_neg) tmp[t++]='-';
-                                                while(t>0){ calc_display[idx++] = tmp[--t]; } calc_display[idx]='\0';
-                                            }
+                                            idx = 0; if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } else { int is_neg=0; if(res<0){is_neg=1; res=-res;} char tmp[20]; int t=0; while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; } if(is_neg) tmp[t++]='-'; while(t>0){ calc_display[idx++] = tmp[--t]; } calc_display[idx]='\0'; }
                                             calc_new_num = 1; calc_op = 0;
                                         } last_click_time = timer_ticks;
                                     }
@@ -284,9 +305,7 @@ void execute_command(char* command) {
                             }
                             else if (app_mode == 8) {
                                 if (timer_ticks - last_click_time > 10) {
-                                    if (mouse_x >= win_x + 145 && mouse_x <= win_x + 190 && mouse_y >= win_y + 115 && mouse_y <= win_y + 127) {
-                                        for(int i=0; i<9; i++) game_board[i] = 0; game_winner = 0; game_turn = 1; os_beep(1000, 2); last_click_time = timer_ticks;
-                                    }
+                                    if (mouse_x >= win_x + 145 && mouse_x <= win_x + 190 && mouse_y >= win_y + 115 && mouse_y <= win_y + 127) { for(int i=0; i<9; i++) game_board[i] = 0; game_winner = 0; game_turn = 1; os_beep(1000, 2); last_click_time = timer_ticks; }
                                     else if (game_winner == 0) {
                                         int col = -1, row = -1;
                                         if(mouse_x >= win_x+35 && mouse_x <= win_x+65) col = 0; else if(mouse_x > win_x+65 && mouse_x <= win_x+105) col = 1; else if(mouse_x > win_x+105 && mouse_x <= win_x+135) col = 2;
@@ -316,7 +335,6 @@ void execute_command(char* command) {
                 if (ss_y <= 0 || ss_y >= 190) ss_dy = -ss_dy;
             }
 
-            // NAYA: Tumhare memory.c ka function - get_used_memory() lagaya hai
             draw_desktop_dynamic(win_x, win_y, app_mode, start_menu_open, note_text, note_saved, cmd_out, cmd_in, current_lba, disk_buffer, bg_color, win_color, timer_ticks, calc_display, game_board, game_winner, file_list_str, ss_x, ss_y, get_used_memory());
             
             if (app_mode != 99) {

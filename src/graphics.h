@@ -5,8 +5,9 @@
 
 unsigned char back_buffer[64000];
 
-// NAYA: Ab yeh static array nahi, pointer hai (kmalloc ise RAM dega)
+// NAYA: Paint aur Gallery dono ke liye VRAM pointers
 unsigned char* paint_canvas = 0; 
+unsigned char* gallery_canvas = 0; 
 
 void init_paint_canvas() {
     if (paint_canvas != 0) {
@@ -89,9 +90,6 @@ void draw_gui_string(char* str, int start_x, int start_y, unsigned char color, i
     }
 }
 
-// ----------------------------------------------------
-// NAYA: used_ram parameter added at the end
-// ----------------------------------------------------
 void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks, char* calc_display, int* game_board, int game_winner, char* file_list_str, int ss_x, int ss_y, unsigned int used_ram) {
     
     if (app_mode == 99) {
@@ -103,15 +101,21 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
 
     clear_graphics(bg_color); 
     
+    // Row 1
     draw_rect(10, 10, 32, 32, 14); draw_rect(14, 14, 24, 24, 15); draw_gui_string("PNT", 15, 45, 15, 100); 
     draw_rect(60, 10, 32, 32, 15); draw_rect(64, 14, 24, 24, 11); draw_gui_string("NOT", 65, 45, 15, 100); 
     draw_rect(110, 10, 32, 32, 8); draw_rect(114, 14, 24, 24, 0); draw_gui_string(">_", 118, 22, 2, 100); draw_gui_string("CMD", 115, 45, 15, 100); 
     draw_rect(160, 10, 32, 32, 5); draw_rect(164, 14, 24, 24, 13); draw_gui_string("HD", 170, 22, 0, 100); draw_gui_string("DSK", 165, 45, 15, 100);
     draw_rect(210, 10, 32, 32, 7); draw_rect(214, 14, 24, 24, 8); draw_gui_string("SET", 215, 22, 15, 100); draw_gui_string("THEME", 210, 45, 15, 100);
     draw_rect(260, 10, 32, 32, 2); draw_rect(264, 14, 24, 24, 10); draw_gui_string("CPU", 267, 22, 0, 100); draw_gui_string("SYS", 265, 45, 15, 100);
+    
+    // Row 2
     draw_rect(10, 60, 32, 32, 9); draw_rect(14, 64, 24, 24, 3); draw_gui_string("+ -", 16, 70, 0, 100); draw_gui_string("CALC", 12, 95, 15, 100);
     draw_rect(60, 60, 32, 32, 12); draw_rect(64, 64, 24, 24, 15); draw_gui_string("X O", 66, 70, 0, 100); draw_gui_string("GAME", 62, 95, 15, 100);
     draw_rect(110, 60, 32, 32, 14); draw_rect(112, 62, 10, 5, 14); draw_rect(114, 66, 24, 22, 15); draw_gui_string("FILE", 112, 95, 15, 100);
+    
+    // NAYA (DAY 91): IMG GALLERY ICON
+    draw_rect(160, 60, 32, 32, 5); draw_rect(164, 64, 24, 24, 13); draw_rect(168, 68, 16, 16, 11); draw_gui_string("IMG", 166, 95, 15, 100);
     
     draw_rect(0, 180, 320, 20, 7); draw_rect(2, 182, 30, 16, 2); draw_gui_string("OS", 10, 187, 15, 100); 
     
@@ -129,7 +133,10 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             draw_rect(win_x + 5, win_y + 116, 15, 15, 0); draw_rect(win_x + 25, win_y + 116, 15, 15, 4);  
             draw_rect(win_x + 45, win_y + 116, 15, 15, 2); draw_rect(win_x + 65, win_y + 116, 15, 15, 1);  
             draw_rect(win_x + 85, win_y + 116, 15, 15, 14); draw_rect(win_x + 105, win_y + 116, 15, 15, 7); 
-            draw_rect(win_x + 135, win_y + 116, 40, 15, 4); draw_gui_string("CLEAR", win_x + 140, win_y + 121, 15, 50);
+            
+            // NAYA: Clear aur Save buttons updated
+            draw_rect(win_x + 130, win_y + 116, 25, 15, 4); draw_gui_string("CLR", win_x + 133, win_y + 121, 15, 50);
+            draw_rect(win_x + 160, win_y + 116, 35, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50);
         } 
         else if (app_mode == 2) { 
             draw_gui_string("MINI NOTES", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 95, 15); draw_gui_string(note_text, win_x + 5, win_y + 22, 0, 190);
@@ -164,9 +171,6 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             int num = sys_ticks; int div = 10000000; int start_print = 0; int nx = win_x + 55;
             for(int i = 0; i < 8; i++) { int digit = (num / div) % 10; if (digit != 0) start_print = 1; if (start_print || div == 1) { draw_char(digit + '0', nx, win_y + 45, 15); nx += 4; } div /= 10; }
             
-            // ----------------------------------------------------
-            // LIVE RAM DISP: ab yeh tumhare memory.c se aayega
-            // ----------------------------------------------------
             draw_gui_string("RAM USED (BYTES):", win_x + 5, win_y + 60, 11, 190);
             unsigned int r_num = used_ram; int r_div = 1000000; int r_start = 0; int rx = win_x + 85;
             if (r_num == 0) { draw_char('0', rx, win_y + 60, 15); }
@@ -178,7 +182,6 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
                     r_div /= 10;
                 }
             }
-            
             draw_gui_string("PROCESS: 1 (GUI ENGINE)", win_x + 5, win_y + 75, 13, 190); draw_gui_string("STORAGE: ATA IDE PIO", win_x + 5, win_y + 90, 3, 190);
         }
         else if (app_mode == 7) {
@@ -197,12 +200,27 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
             draw_gui_string("C:/ROOT/HOME", win_x + 5, win_y + 22, 8, 190); draw_rect(win_x + 2, win_y + 32, 196, 2, 7); 
             draw_gui_string(file_list_str, win_x + 10, win_y + 40, 0, 180);
         }
+        else if (app_mode == 10 && gallery_canvas != 0) {
+            // ----------------------------------------------------
+            // NAYA (DAY 92): THE IMAGE GALLERY VIEWER!
+            // ----------------------------------------------------
+            draw_gui_string("IMAGE GALLERY", win_x + 5, win_y + 5, 15, 180);
+            int p_idx = 0;
+            for(int iy = 0; iy < 95; iy++) {
+                for(int ix = 0; ix < 196; ix++) { put_pixel_buf(win_x + 2 + ix, win_y + 17 + iy, gallery_canvas[p_idx++]); }
+            }
+            // Viewer border
+            draw_rect(win_x + 2, win_y + 115, 196, 17, 8); 
+            draw_gui_string("FILE: DRAWING.BMP", win_x + 10, win_y + 120, 15, 150);
+        }
     }
 
     if (start_menu_open) {
         draw_rect(2, 50, 180, 125, 7); draw_gui_string("MENU", 10, 53, 0, 50);
         draw_rect(10, 65, 15, 15, 14); draw_gui_string("PAINT", 30, 70, 0, 50); draw_rect(10, 85, 15, 15, 11); draw_gui_string("NOTES", 30, 90, 0, 50); draw_rect(10, 105, 15, 15, 0); draw_gui_string("CMD", 30, 110, 0, 50); draw_rect(10, 125, 15, 15, 13); draw_gui_string("DISK", 30, 130, 0, 50); draw_rect(10, 145, 15, 15, 14); draw_gui_string("FILE", 30, 150, 0, 50); 
-        draw_rect(90, 65, 15, 15, 8); draw_gui_string("THEME", 110, 70, 0, 50); draw_rect(90, 85, 15, 15, 2); draw_gui_string("SYS", 110, 90, 0, 50); draw_rect(90, 105, 15, 15, 3); draw_gui_string("CALC", 110, 110, 0, 50); draw_rect(90, 125, 15, 15, 12); draw_gui_string("GAME", 110, 130, 0, 50); draw_rect(90, 145, 15, 15, 4); draw_gui_string("REBOOT", 110, 150, 0, 50); 
+        draw_rect(90, 65, 15, 15, 8); draw_gui_string("THEME", 110, 70, 0, 50); draw_rect(90, 85, 15, 15, 2); draw_gui_string("SYS", 110, 90, 0, 50); draw_rect(90, 105, 15, 15, 3); draw_gui_string("CALC", 110, 110, 0, 50); draw_rect(90, 125, 15, 15, 12); draw_gui_string("GAME", 110, 130, 0, 50); 
+        // NAYA (DAY 92): IMG MENU ITEM
+        draw_rect(90, 145, 15, 15, 5); draw_gui_string("IMG", 110, 150, 0, 50); 
     }
 }
 
