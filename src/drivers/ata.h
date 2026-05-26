@@ -1,7 +1,7 @@
 #ifndef ATA_H
 #define ATA_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 // 16-bit (word) in/out functions kyunki Hard Disk 2 bytes ek sath bhejti hai
 static inline unsigned short inw(unsigned short port) {

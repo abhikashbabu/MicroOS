@@ -1,8 +1,8 @@
 #ifndef PCI_H
 #define PCI_H
 
-#include "io.h"
-#include "display.h"
+#include "../kernel/io.h"
+#include "../drivers/display.h"
 
 unsigned int pci_read_word(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset) {
     unsigned int address;

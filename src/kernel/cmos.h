@@ -1,7 +1,7 @@
 #ifndef CMOS_H
 #define CMOS_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 // CMOS Ports
 #define CMOS_ADDRESS 0x70

@@ -1,9 +1,9 @@
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-#include "io.h"
-#include "display.h"
-#include "shell.h"
+#include "../kernel/io.h"
+#include "../drivers/display.h"
+#include "../apps/shell.h"
 
 // Normal map (Bina shift ke)
 const char keyboard_map[128] = {

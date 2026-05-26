@@ -1,9 +1,9 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "display.h"
-#include "io.h"
-#include "string.h"
+#include "../drivers/display.h"
+#include "../kernel/io.h"
+#include "../runtime/string.h"
 
 // OS ke dusre files se variables aur functions lana (extern ka jaadu)
 extern unsigned char current_color;

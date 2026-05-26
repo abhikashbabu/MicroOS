@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "../kernel/memory.h"
 
 // Variables yahan actually create honge
 unsigned int heap_ptr = 0x200000; 

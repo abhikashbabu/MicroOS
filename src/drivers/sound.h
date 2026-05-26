@@ -1,7 +1,7 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 // NAYA: ind_runner.h ke error ko fix karne ke liye ek shortcut (Macro)
 #define stop_sound nosound

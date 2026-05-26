@@ -1,10 +1,9 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 
-#include "display.h"
-#include "fs.h"
-#include "io.h"
-
+#include "../drivers/display.h"
+#include "../fs/fs.h"
+#include "../kernel/io.h"
 // FIX 1: Type match kar diya (const char)
 extern const char keyboard_map[128];
 extern const char keyboard_map_shifted[128];

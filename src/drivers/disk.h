@@ -1,7 +1,7 @@
 #ifndef DISK_H
 #define DISK_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 static inline void outsw(unsigned short port, const void* addr, unsigned int word_count) {
     __asm__ volatile("rep outsw" : "+S"(addr), "+c"(word_count) : "d"(port) : "memory");

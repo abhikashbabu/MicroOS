@@ -1,7 +1,7 @@
 #ifndef VGA_H
 #define VGA_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 // VGA Hardware Register Ports
 #define MISC_PORT 0x3C2

@@ -1,5 +1,5 @@
-#include "mouse.h"
-#include "io.h"
+#include "../drivers/mouse.h"
+#include "../kernel/io.h"
 
 // Variables yahan actually declare honge
 int mouse_x = 40;

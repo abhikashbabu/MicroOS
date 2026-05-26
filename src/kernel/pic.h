@@ -1,7 +1,7 @@
 #ifndef PIC_H
 #define PIC_H
 
-#include "io.h"
+#include "../kernel/io.h"
 
 // PIC chips ke ports (Master aur Slave)
 #define PIC1_COMMAND 0x20

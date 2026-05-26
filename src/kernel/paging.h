@@ -1,7 +1,7 @@
 #ifndef PAGING_H
 #define PAGING_H
 
-#include "display.h"
+#include "../drivers/display.h"
 
 // 1024 entries = 4MB memory per table (4KB per page)
 // '__attribute__((aligned(4096)))' ensures memory is exactly on a 4KB boundary

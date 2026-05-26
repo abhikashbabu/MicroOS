@@ -1,11 +1,11 @@
 #ifndef IND_RUNNER_H
 #define IND_RUNNER_H
 
-#include "display.h"
-#include "fs.h"
-#include "sound.h"  
-#include "task.h"   
-#include "io.h"     
+#include "../drivers/display.h"
+#include "../fs/fs.h"
+#include "../drivers/sound.h"  
+#include "../kernel/task.h"   
+#include "../kernel/io.h"     
 
 extern void itoa(int n, char s[]); 
 extern const char keyboard_map[128]; 

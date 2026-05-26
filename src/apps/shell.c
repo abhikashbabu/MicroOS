@@ -1,20 +1,28 @@
-#include "shell.h"
-#include "display.h"
-#include "string.h"
-#include "cmos.h"
-#include "io.h"
-#include "memory.h"  // NAYA: Memory manager include kiya
-#include "fs.h"          // NAYA
-#include "ind_runner.h"  // NAYA
-#include "editor.h"      // NAYA
-#include "pci.h"         // NAYA
-#include "task.h"        // NAYA
-#include "mouse.h"
-#include "vga.h"
-#include "graphics.h"
-#include "disk.h" // ISKO UPAR ADD KARNA HAI
-#include "sound.h"
+#include "../apps/shell.h"
 
+#include "../drivers/display.h"
+#include "../runtime/string.h"
+
+#include "../kernel/cmos.h"
+#include "../kernel/io.h"
+#include "../kernel/memory.h"
+
+#include "../fs/fs.h"
+
+#include "../runtime/ind_runner.h"
+
+#include "../apps/editor.h"
+
+#include "../drivers/pci.h"
+
+#include "../kernel/task.h"
+
+#include "../drivers/mouse.h"
+#include "../drivers/vga.h"
+#include "../gui/graphics.h"
+
+#include "../drivers/disk.h"
+#include "../drivers/sound.h"
 void execute_command(char* command) {
     if (command[0] == '\0') return;
     

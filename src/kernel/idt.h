@@ -1,7 +1,7 @@
 #ifndef IDT_H
 #define IDT_H
-#include "timer.h" // YEH LINE ADD KARO
-#include "io.h"
+#include "../kernel/timer.h" // YEH LINE ADD KARO
+#include "../kernel/io.h"
 
 struct idt_entry {
     unsigned short base_low;

@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-#include "vga.h"
+#include "../drivers/vga.h"
 
 unsigned char back_buffer[64000];
 unsigned char* paint_canvas = 0; 

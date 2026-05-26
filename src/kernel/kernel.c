@@ -1,15 +1,15 @@
-#include "display.h"
-#include "keyboard.h"
-#include "fs.h"
-#include "gdt.h" 
-#include "idt.h" 
-#include "pic.h"        // NAYA: Day 17
-#include "ind_runner.h" // NAYA: Day 18 ke liye zaroori hai
-#include "mouse.h"      // NAYA
-#include "paging.h" // NAYA (Day 31)
-#include "memory.h" // NAYA (Day 32)
-#include "task.h"   // NAYA: Task Manager include kiya
-#include "mouse.h"
+#include "../drivers/display.h"
+#include "../drivers/keyboard.h"
+#include "../fs/fs.h"
+#include "../kernel/gdt.h" 
+#include "../kernel/idt.h" 
+#include "../kernel/pic.h"        // NAYA: Day 17
+#include "../runtime/ind_runner.h" // NAYA: Day 18 ke liye zaroori hai
+#include "../drivers/mouse.h"      // NAYA
+#include "../kernel/paging.h" // NAYA (Day 31)
+#include "../kernel/memory.h" // NAYA (Day 32)
+#include "../kernel/task.h"   // NAYA: Task Manager include kiya
+#include "../drivers/mouse.h"
 
 void kernel_main() {
     set_color(COLOR_WHITE, COLOR_BLACK);

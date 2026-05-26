@@ -1,5 +1,6 @@
-#include "display.h"
-#include "io.h"  // NAYA: Hardware ports se baat karne ke liye io.h zaroori hai
+#include "../drivers/display.h"
+#include "../kernel/io.h"
+
 
 volatile unsigned short* vga_buffer = (unsigned short*)0xB8000;
 int cursor_x = 0;
