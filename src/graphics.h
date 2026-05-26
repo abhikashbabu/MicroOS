@@ -82,12 +82,18 @@ void draw_gui_string(char* str, int start_x, int start_y, unsigned char color, i
     }
 }
 
-// NAYA (DAY 95): Naye arguments add kiye: day, month, year, playing_note
 void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_open, char* note_text, int note_saved, char* cmd_out, char* cmd_in, int current_lba, char* disk_buffer, unsigned char bg_color, unsigned char win_color, unsigned int sys_ticks, char* calc_display, int* game_board, int game_winner, char* file_list_str, int ss_x, int ss_y, unsigned int used_ram, int day, int month, int year, int playing_note) {
     
+    if (app_mode == -1) {
+        clear_graphics(bg_color); 
+        draw_rect(110, 70, 100, 60, 15); draw_rect(110, 70, 100, 15, win_color); draw_gui_string("SECURITY", 135, 75, 15, 100);
+        draw_rect(120, 95, 80, 15, 7); 
+        int px = 125; for(int i = 0; cmd_in[i] != '\0'; i++) { draw_char('*', px, 100, 0); px += 6; }
+        draw_gui_string("ENTER PASSWORD", 115, 115, 8, 100); return; 
+    }
+
     if (app_mode == 99) {
-        clear_graphics(0); 
-        draw_gui_string("MICRO OS", ss_x, ss_y, 14, 300); draw_gui_string("V3.0 IDLE", ss_x-2, ss_y+10, 11, 300); return; 
+        clear_graphics(0); draw_gui_string("MICRO OS", ss_x, ss_y, 14, 300); draw_gui_string("V3.0 IDLE", ss_x-2, ss_y+10, 11, 300); return; 
     }
 
     clear_graphics(bg_color); 
@@ -105,41 +111,38 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
     draw_rect(60, 60, 32, 32, 12); draw_rect(64, 64, 24, 24, 15); draw_gui_string("X O", 66, 70, 0, 100); draw_gui_string("GAME", 62, 95, 15, 100);
     draw_rect(110, 60, 32, 32, 14); draw_rect(112, 62, 10, 5, 14); draw_rect(114, 66, 24, 22, 15); draw_gui_string("FILE", 112, 95, 15, 100);
     draw_rect(160, 60, 32, 32, 5); draw_rect(164, 64, 24, 24, 13); draw_rect(168, 68, 16, 16, 11); draw_gui_string("IMG", 166, 95, 15, 100);
-    
-    // NAYA (DAY 94): TIME APP ICON
     draw_rect(210, 60, 32, 32, 11); draw_rect(214, 64, 24, 24, 15); draw_char('O', 224, 73, 0); draw_gui_string("TIME", 212, 95, 15, 100);
-    // NAYA (DAY 95): MUSIC (PIANO) APP ICON
     draw_rect(260, 60, 32, 32, 13); draw_rect(264, 64, 24, 24, 0); draw_rect(268, 68, 4, 16, 15); draw_rect(276, 68, 4, 16, 15); draw_gui_string("TUNE", 262, 95, 15, 100);
     
+    // ----------------------------------------------------
+    // NAYA (DAY 99): ROW 3 - INFO & SHUTDOWN ICONS
+    // ----------------------------------------------------
+    draw_rect(10, 110, 32, 32, 1); draw_rect(14, 114, 24, 24, 9); draw_char('I', 24, 122, 15); draw_gui_string("INFO", 12, 145, 15, 100);
+    draw_rect(60, 110, 32, 32, 4); draw_rect(64, 114, 24, 24, 12); draw_char('O', 74, 122, 15); draw_gui_string("OFF", 65, 145, 15, 100);
+
     draw_rect(0, 180, 320, 20, 7); draw_rect(2, 182, 30, 16, 2); draw_gui_string("OS", 10, 187, 15, 100); 
     
     if (app_mode > 0) {
-        draw_rect(win_x, win_y, 200, 135, 15); 
-        draw_rect(win_x, win_y, 200, 15, win_color); 
+        draw_rect(win_x + 4, win_y + 4, 200, 135, 8); 
+        draw_rect(win_x, win_y, 200, 135, 15); draw_rect(win_x, win_y, 200, 15, win_color); 
         draw_rect(win_x + 185, win_y + 2, 12, 11, 4); draw_char('X', win_x + 189, win_y + 5, 15); 
         
         if (app_mode == 1 && paint_canvas != 0) { 
             draw_gui_string("MICRO PAINT", win_x + 5, win_y + 5, 15, 180);
             int p_idx = 0; for(int iy = 0; iy < 95; iy++) { for(int ix = 0; ix < 196; ix++) { put_pixel_buf(win_x + 2 + ix, win_y + 17 + iy, paint_canvas[p_idx++]); } }
             draw_rect(win_x + 5, win_y + 116, 15, 15, 0); draw_rect(win_x + 25, win_y + 116, 15, 15, 4);  draw_rect(win_x + 45, win_y + 116, 15, 15, 2); draw_rect(win_x + 65, win_y + 116, 15, 15, 1);  draw_rect(win_x + 85, win_y + 116, 15, 15, 14); draw_rect(win_x + 105, win_y + 116, 15, 15, 7); 
-            draw_rect(win_x + 130, win_y + 116, 25, 15, 4); draw_gui_string("CLR", win_x + 133, win_y + 121, 15, 50);
-            draw_rect(win_x + 160, win_y + 116, 35, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50);
+            draw_rect(win_x + 130, win_y + 116, 25, 15, 4); draw_gui_string("CLR", win_x + 133, win_y + 121, 15, 50); draw_rect(win_x + 160, win_y + 116, 35, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50);
         } 
         else if (app_mode == 2) { 
             draw_gui_string("MINI NOTES", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 95, 15); draw_gui_string(note_text, win_x + 5, win_y + 22, 0, 190);
-            if (note_saved) { draw_rect(win_x + 155, win_y + 116, 40, 15, 14); draw_gui_string("SAVD", win_x + 163, win_y + 121, 0, 50); } 
-            else { draw_rect(win_x + 155, win_y + 116, 40, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50); }
+            if (note_saved) { draw_rect(win_x + 155, win_y + 116, 40, 15, 14); draw_gui_string("SAVD", win_x + 163, win_y + 121, 0, 50); } else { draw_rect(win_x + 155, win_y + 116, 40, 15, 2); draw_gui_string("SAVE", win_x + 163, win_y + 121, 15, 50); }
         }
-        else if (app_mode == 3) { 
-            draw_gui_string("TERMINAL", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); draw_gui_string(cmd_out, win_x + 5, win_y + 22, 2, 190); draw_gui_string(">", win_x + 5, win_y + 120, 15, 10); draw_gui_string(cmd_in, win_x + 12, win_y + 120, 15, 180);
-        }
+        else if (app_mode == 3) { draw_gui_string("TERMINAL", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); draw_gui_string(cmd_out, win_x + 5, win_y + 22, 2, 190); draw_gui_string(">", win_x + 5, win_y + 120, 15, 10); draw_gui_string(cmd_in, win_x + 12, win_y + 120, 15, 180); }
         else if (app_mode == 4) { 
-            draw_gui_string("DISK VIEWER", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
-            draw_gui_string("LBA SECTOR:", win_x + 5, win_y + 22, 14, 190); 
+            draw_gui_string("DISK VIEWER", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); draw_gui_string("LBA SECTOR:", win_x + 5, win_y + 22, 14, 190); 
             int num_x = win_x + 55; if(current_lba >= 100) { draw_char((current_lba/100)+'0', num_x, win_y+22, 14); num_x+=4; } if(current_lba >= 10)  { draw_char(((current_lba/10)%10)+'0', num_x, win_y+22, 14); num_x+=4; } draw_char((current_lba%10)+'0', num_x, win_y+22, 14);
             draw_rect(win_x + 120, win_y + 19, 30, 12, 4); draw_gui_string("<PREV", win_x + 123, win_y + 23, 15, 30); draw_rect(win_x + 160, win_y + 19, 30, 12, 2); draw_gui_string("NEXT>", win_x + 163, win_y + 23, 15, 30);
-            draw_gui_string("RAW DISK BYTES:\n", win_x + 5, win_y + 35, 2, 190);  
-            int tx = win_x + 5; int ty = win_y + 50; for(int i = 0; i < 140; i++) { char c = disk_buffer[i]; if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ') { draw_char(c, tx, ty, 15); } else { draw_char('.', tx, ty, 8); } tx += 4; if (tx > win_x + 190) { tx = win_x + 5; ty += 8; } }
+            draw_gui_string("RAW DISK BYTES:\n", win_x + 5, win_y + 35, 2, 190);  int tx = win_x + 5; int ty = win_y + 50; for(int i = 0; i < 140; i++) { char c = disk_buffer[i]; if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ') { draw_char(c, tx, ty, 15); } else { draw_char('.', tx, ty, 8); } tx += 4; if (tx > win_x + 190) { tx = win_x + 5; ty += 8; } }
         }
         else if (app_mode == 5) {
             draw_gui_string("CONTROL PANEL", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 7); 
@@ -149,90 +152,56 @@ void draw_desktop_dynamic(int win_x, int win_y, int app_mode, int start_menu_ope
         else if (app_mode == 6) {
             draw_gui_string("SYSTEM MONITOR", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
             draw_gui_string("MICRO OS KERNEL", win_x + 5, win_y + 22, 10, 190); draw_gui_string("----------------", win_x + 5, win_y + 30, 7, 190);
-            draw_gui_string("CPU TICKS:", win_x + 5, win_y + 45, 14, 190);
-            int num = sys_ticks; int div = 10000000; int start_print = 0; int nx = win_x + 55; for(int i = 0; i < 8; i++) { int digit = (num / div) % 10; if (digit != 0) start_print = 1; if (start_print || div == 1) { draw_char(digit + '0', nx, win_y + 45, 15); nx += 4; } div /= 10; }
-            draw_gui_string("RAM USED (BYTES):", win_x + 5, win_y + 60, 11, 190);
-            unsigned int r_num = used_ram; int r_div = 1000000; int r_start = 0; int rx = win_x + 85;
-            if (r_num == 0) { draw_char('0', rx, win_y + 60, 15); } else { for(int i = 0; i < 7; i++) { int digit = (r_num / r_div) % 10; if (digit != 0) r_start = 1; if (r_start || r_div == 1) { draw_char(digit + '0', rx, win_y + 60, 15); rx += 4; } r_div /= 10; } }
+            draw_gui_string("CPU TICKS:", win_x + 5, win_y + 45, 14, 190); int num = sys_ticks; int div = 10000000; int start_print = 0; int nx = win_x + 55; for(int i = 0; i < 8; i++) { int digit = (num / div) % 10; if (digit != 0) start_print = 1; if (start_print || div == 1) { draw_char(digit + '0', nx, win_y + 45, 15); nx += 4; } div /= 10; }
+            draw_gui_string("RAM USED (BYTES):", win_x + 5, win_y + 60, 11, 190); unsigned int r_num = used_ram; int r_div = 1000000; int r_start = 0; int rx = win_x + 85; if (r_num == 0) { draw_char('0', rx, win_y + 60, 15); } else { for(int i = 0; i < 7; i++) { int digit = (r_num / r_div) % 10; if (digit != 0) r_start = 1; if (r_start || r_div == 1) { draw_char(digit + '0', rx, win_y + 60, 15); rx += 4; } r_div /= 10; } }
             draw_gui_string("PROCESS: 1 (GUI ENGINE)", win_x + 5, win_y + 75, 13, 190); draw_gui_string("STORAGE: ATA IDE PIO", win_x + 5, win_y + 90, 3, 190);
         }
         else if (app_mode == 7) {
-            draw_gui_string("CALCULATOR", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 8); draw_rect(win_x + 10, win_y + 25, 180, 15, 15); draw_gui_string(calc_display, win_x + 15, win_y + 30, 0, 170); 
-            char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} };
-            for(int r=0; r<4; r++) { for(int c=0; c<4; c++) { int bx = win_x + 15 + (c * 45); int by = win_y + 50 + (r * 20); unsigned char btn_col = 7; if(keys[r][c] == 'C') btn_col = 4; else if(keys[r][c] == '=') btn_col = 2; else if(keys[r][c] == '/' || keys[r][c] == '*' || keys[r][c] == '-' || keys[r][c] == '+') btn_col = 3; draw_rect(bx, by, 35, 15, btn_col); draw_char(keys[r][c], bx + 16, by + 5, 0); } }
+            draw_gui_string("CALCULATOR", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 8); draw_rect(win_x + 10, win_y + 25, 180, 15, 15); draw_gui_string(calc_display, win_x + 15, win_y + 30, 0, 170); char keys[4][4] = { {'7','8','9','/'}, {'4','5','6','*'}, {'1','2','3','-'}, {'C','0','=','+'} }; for(int r=0; r<4; r++) { for(int c=0; c<4; c++) { int bx = win_x + 15 + (c * 45); int by = win_y + 50 + (r * 20); unsigned char btn_col = 7; if(keys[r][c] == 'C') btn_col = 4; else if(keys[r][c] == '=') btn_col = 2; else if(keys[r][c] == '/' || keys[r][c] == '*' || keys[r][c] == '-' || keys[r][c] == '+') btn_col = 3; draw_rect(bx, by, 35, 15, btn_col); draw_char(keys[r][c], bx + 16, by + 5, 0); } }
         }
         else if (app_mode == 8) {
-            draw_gui_string("TIC-TAC-TOE", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 15); draw_rect(win_x + 65, win_y + 25, 2, 90, 0); draw_rect(win_x + 105, win_y + 25, 2, 90, 0); draw_rect(win_x + 35, win_y + 55, 100, 2, 0); draw_rect(win_x + 35, win_y + 85, 100, 2, 0); 
-            for(int i = 0; i < 9; i++) { int col = i % 3; int row = i / 3; int px = win_x + 45 + (col * 40); int py = win_y + 35 + (row * 30); if(game_board[i] == 1) draw_char('X', px, py, 4); else if(game_board[i] == 2) draw_char('O', px, py, 1); }
-            if(game_winner == 1) draw_gui_string("PLAYER X WINS!", win_x + 40, win_y + 120, 4, 150); else if(game_winner == 2) draw_gui_string("PLAYER O WINS!", win_x + 40, win_y + 120, 1, 150); else if(game_winner == 3) draw_gui_string("IT'S A DRAW!", win_x + 45, win_y + 120, 0, 150);
-            draw_rect(win_x + 145, win_y + 115, 45, 12, 2); draw_gui_string("RESET", win_x + 150, win_y + 118, 15, 50);
+            draw_gui_string("TIC-TAC-TOE", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 15); draw_rect(win_x + 65, win_y + 25, 2, 90, 0); draw_rect(win_x + 105, win_y + 25, 2, 90, 0); draw_rect(win_x + 35, win_y + 55, 100, 2, 0); draw_rect(win_x + 35, win_y + 85, 100, 2, 0); for(int i = 0; i < 9; i++) { int col = i % 3; int row = i / 3; int px = win_x + 45 + (col * 40); int py = win_y + 35 + (row * 30); if(game_board[i] == 1) draw_char('X', px, py, 4); else if(game_board[i] == 2) draw_char('O', px, py, 1); } if(game_winner == 1) draw_gui_string("PLAYER X WINS!", win_x + 40, win_y + 120, 4, 150); else if(game_winner == 2) draw_gui_string("PLAYER O WINS!", win_x + 40, win_y + 120, 1, 150); else if(game_winner == 3) draw_gui_string("IT'S A DRAW!", win_x + 45, win_y + 120, 0, 150); draw_rect(win_x + 145, win_y + 115, 45, 12, 2); draw_gui_string("RESET", win_x + 150, win_y + 118, 15, 50);
         }
         else if (app_mode == 9) {
-            draw_gui_string("MICRO EXPLORER", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 15); 
-            draw_gui_string("C:/ROOT/HOME", win_x + 5, win_y + 22, 8, 190); draw_rect(win_x + 2, win_y + 32, 196, 2, 7); 
-            draw_gui_string(file_list_str, win_x + 10, win_y + 40, 0, 180);
+            draw_gui_string("MICRO EXPLORER", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 15); draw_gui_string("C:/ROOT/HOME", win_x + 5, win_y + 22, 8, 190); draw_rect(win_x + 2, win_y + 32, 196, 2, 7); draw_gui_string(file_list_str, win_x + 10, win_y + 40, 0, 180);
         }
         else if (app_mode == 10 && gallery_canvas != 0) {
-            draw_gui_string("IMAGE GALLERY", win_x + 5, win_y + 5, 15, 180);
-            int p_idx = 0; for(int iy = 0; iy < 95; iy++) { for(int ix = 0; ix < 196; ix++) { put_pixel_buf(win_x + 2 + ix, win_y + 17 + iy, gallery_canvas[p_idx++]); } }
-            draw_rect(win_x + 2, win_y + 115, 196, 17, 8); draw_gui_string("FILE: DRAWING.BMP", win_x + 10, win_y + 120, 15, 150);
+            draw_gui_string("IMAGE GALLERY", win_x + 5, win_y + 5, 15, 180); int p_idx = 0; for(int iy = 0; iy < 95; iy++) { for(int ix = 0; ix < 196; ix++) { put_pixel_buf(win_x + 2 + ix, win_y + 17 + iy, gallery_canvas[p_idx++]); } } draw_rect(win_x + 2, win_y + 115, 196, 17, 8); draw_gui_string("FILE: DRAWING.BMP", win_x + 10, win_y + 120, 15, 150);
         }
         else if (app_mode == 11) {
-            // ----------------------------------------------------
-            // NAYA (DAY 94): THE CALENDAR CLOCK APP
-            // ----------------------------------------------------
-            draw_gui_string("SYSTEM CALENDAR", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 1); // Blue Bg
-            
-            draw_gui_string("HARDWARE CMOS DATE:", win_x + 10, win_y + 35, 14, 180);
-            int nx = win_x + 10;
-            draw_char((day/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((day%10)+'0', nx, win_y+55, 15); nx+=8;
-            draw_char('/', nx, win_y+55, 15); nx+=8;
-            draw_char((month/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((month%10)+'0', nx, win_y+55, 15); nx+=8;
-            draw_char('/', nx, win_y+55, 15); nx+=8;
-            draw_char('2', nx, win_y+55, 15); nx+=4; draw_char('0', nx, win_y+55, 15); nx+=4;
-            draw_char((year/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((year%10)+'0', nx, win_y+55, 15);
-            
+            draw_gui_string("SYSTEM CALENDAR", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 1); 
+            draw_gui_string("HARDWARE CMOS DATE:", win_x + 10, win_y + 35, 14, 180); int nx = win_x + 10; draw_char((day/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((day%10)+'0', nx, win_y+55, 15); nx+=8; draw_char('/', nx, win_y+55, 15); nx+=8; draw_char((month/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((month%10)+'0', nx, win_y+55, 15); nx+=8; draw_char('/', nx, win_y+55, 15); nx+=8; draw_char('2', nx, win_y+55, 15); nx+=4; draw_char('0', nx, win_y+55, 15); nx+=4; draw_char((year/10)+'0', nx, win_y+55, 15); nx+=4; draw_char((year%10)+'0', nx, win_y+55, 15);
             draw_gui_string("LOCKED TO INDIAN STANDARD TIME", win_x + 10, win_y + 90, 11, 180);
         }
         else if (app_mode == 12) {
-            // ----------------------------------------------------
-            // NAYA (DAY 95): THE MINI PIANO SYNTHESIZER
-            // ----------------------------------------------------
-            draw_gui_string("PIANO SYNTHESIZER", win_x + 5, win_y + 5, 15, 180);
-            draw_rect(win_x + 2, win_y + 17, 196, 115, 0); // Black Bg
+            draw_gui_string("PIANO SYNTHESIZER", win_x + 5, win_y + 5, 15, 180); draw_rect(win_x + 2, win_y + 17, 196, 115, 0); 
+            char keyname[] = {'A','S','D','F','G','H','J'}; for(int k=0; k<7; k++) { unsigned char col = (playing_note == k) ? 14 : 15; draw_rect(win_x + 15 + (k*25), win_y + 30, 20, 60, col); draw_char(keyname[k], win_x + 23 + (k*25), win_y + 100, 14); } draw_gui_string("USE KEYBOARD TO PLAY MUSIC", win_x + 20, win_y + 120, 2, 180);
+        }
+        // ----------------------------------------------------
+        // NAYA (DAY 99): 13TH APP - ABOUT OS (EASTER EGG)
+        // ----------------------------------------------------
+        else if (app_mode == 13) {
+            draw_gui_string("ABOUT MICRO OS", win_x + 5, win_y + 5, 15, 180);
+            draw_rect(win_x + 2, win_y + 17, 196, 115, 15); // White bg
             
-            char keyname[] = {'A','S','D','F','G','H','J'};
-            for(int k=0; k<7; k++) {
-                unsigned char col = (playing_note == k) ? 14 : 15; // Yellow if playing, else white
-                draw_rect(win_x + 15 + (k*25), win_y + 30, 20, 60, col);
-                draw_char(keyname[k], win_x + 23 + (k*25), win_y + 100, 14); // Keybind text
-            }
-            draw_gui_string("USE KEYBOARD TO PLAY MUSIC", win_x + 20, win_y + 120, 2, 180);
+            draw_rect(win_x + 20, win_y + 30, 160, 40, 9); // Blue Highlight Box
+            draw_gui_string("MICRO OS VERSION 3.0", win_x + 30, win_y + 40, 15, 180);
+            draw_gui_string("CREATED BY: ABHIKASH", win_x + 30, win_y + 55, 14, 180);
+            
+            draw_gui_string("100 DAYS OF OS DEV", win_x + 20, win_y + 85, 2, 180);
+            draw_gui_string("GITHUB RELEASE EDITION", win_x + 20, win_y + 105, 0, 180);
         }
     }
 
     if (start_menu_open) {
-        // NAYA (DAY 93): 14 Items ke liye Full Height Menu (7 per col)
-        draw_rect(2, 30, 180, 150, 7); draw_gui_string("MENU", 10, 33, 0, 50);
+        draw_rect(5, 33, 180, 150, 8); draw_rect(2, 30, 180, 150, 7); draw_gui_string("MENU", 10, 33, 0, 50);
+        draw_rect(10, 45, 15, 15, 14); draw_gui_string("PAINT", 30, 50, 0, 50); draw_rect(10, 65, 15, 15, 11); draw_gui_string("NOTES", 30, 70, 0, 50); draw_rect(10, 85, 15, 15, 0); draw_gui_string("CMD", 30, 90, 0, 50); draw_rect(10, 105, 15, 15, 13); draw_gui_string("DISK", 30, 110, 0, 50); draw_rect(10, 125, 15, 15, 14); draw_gui_string("FILE", 30, 130, 0, 50); draw_rect(10, 145, 15, 15, 11); draw_gui_string("TIME", 30, 150, 0, 50); 
         
-        // Col 1
-        draw_rect(10, 45, 15, 15, 14); draw_gui_string("PAINT", 30, 50, 0, 50); 
-        draw_rect(10, 65, 15, 15, 11); draw_gui_string("NOTES", 30, 70, 0, 50); 
-        draw_rect(10, 85, 15, 15, 0); draw_gui_string("CMD", 30, 90, 0, 50); 
-        draw_rect(10, 105, 15, 15, 13); draw_gui_string("DISK", 30, 110, 0, 50); 
-        draw_rect(10, 125, 15, 15, 14); draw_gui_string("FILE", 30, 130, 0, 50); 
-        draw_rect(10, 145, 15, 15, 11); draw_gui_string("TIME", 30, 150, 0, 50); // NAYA
-        draw_rect(10, 165, 15, 15, 4); draw_gui_string("CLOSE", 30, 170, 0, 50); 
+        draw_rect(10, 165, 15, 15, 1); draw_gui_string("INFO", 30, 170, 0, 50); // NAYA (Replaced CLOSE)
         
-        // Col 2
-        draw_rect(90, 45, 15, 15, 8); draw_gui_string("THEME", 110, 50, 0, 50); 
-        draw_rect(90, 65, 15, 15, 2); draw_gui_string("SYS", 110, 70, 0, 50); 
-        draw_rect(90, 85, 15, 15, 3); draw_gui_string("CALC", 110, 90, 0, 50); 
-        draw_rect(90, 105, 15, 15, 12); draw_gui_string("GAME", 110, 110, 0, 50); 
-        draw_rect(90, 125, 15, 15, 5); draw_gui_string("IMG", 110, 130, 0, 50); 
-        draw_rect(90, 145, 15, 15, 13); draw_gui_string("TUNE", 110, 150, 0, 50); // NAYA
-        draw_rect(90, 165, 15, 15, 4); draw_gui_string("REBOOT", 110, 170, 0, 50); 
+        draw_rect(90, 45, 15, 15, 8); draw_gui_string("THEME", 110, 50, 0, 50); draw_rect(90, 65, 15, 15, 2); draw_gui_string("SYS", 110, 70, 0, 50); draw_rect(90, 85, 15, 15, 3); draw_gui_string("CALC", 110, 90, 0, 50); draw_rect(90, 105, 15, 15, 12); draw_gui_string("GAME", 110, 110, 0, 50); draw_rect(90, 125, 15, 15, 5); draw_gui_string("IMG", 110, 130, 0, 50); draw_rect(90, 145, 15, 15, 13); draw_gui_string("TUNE", 110, 150, 0, 50); 
+        
+        draw_rect(90, 165, 15, 15, 4); draw_gui_string("OFF", 110, 170, 0, 50); // NAYA (Replaced REBOOT)
     }
 }
 
