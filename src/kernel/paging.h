@@ -13,13 +13,11 @@ unsigned int base_page_tables[4][1024] __attribute__((aligned(4096)));
 unsigned int vesa_page_table[1024] __attribute__((aligned(4096)));
 
 void init_paging() {
-    // 1. Identity map the first 16 MB of memory (Kernel + 3MB High-Res Buffer ke liye jagah)
+    // 1. Identity map the first 16 MB of memory (Kernel + High-Res Buffer)
     for(int t = 0; t < 4; t++) {
         for(int i = 0; i < 1024; i++) {
-            // (t * 0x400000) agle 4MB block pe shift karta hai
             base_page_tables[t][i] = ((t * 0x400000) + (i * 0x1000)) | 3; 
         }
-        // In 4 tables ko directory ke shuruwaati 4 index mein daal do
         page_directory[t] = ((unsigned int)base_page_tables[t]) | 3;
     }
     
