@@ -259,8 +259,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         }
                     }
                 }
-                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, themes[theme_idx], game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer); 
-            }
+           render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer);            }
         }
     }
 
