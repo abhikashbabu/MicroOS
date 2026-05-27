@@ -65,11 +65,7 @@ void draw_hd_mouse_pointer(int x, int y) {
 }
 // ... (Upar ka font aur draw_rounded_rect wala code same rahega) ...
 
-// ----------------------------------------------------
-// DAY 115: LIVE CLOCK ON TASKBAR
-// Naye parameters: h (hours), m (minutes)
-// ----------------------------------------------------
-void draw_modern_taskbar(int h, int m) {
+void draw_modern_taskbar(int h, int m, int active_app) {
     int tb_width = 800;
     int tb_height = 50;
     int tb_x = (1024 - tb_width) / 2; 
@@ -81,17 +77,23 @@ void draw_modern_taskbar(int h, int m) {
     draw_rounded_rect(tb_x + 20, tb_y + 10, 30, 30, 8, COLOR_ACCENT);
     draw_hd_string("M", tb_x + 28, tb_y + 15, COLOR_TEXT, 2);
 
-    draw_rounded_rect(tb_x + 70, tb_y + 10, 30, 30, 8, 0x00FFB300); 
-    draw_rounded_rect(tb_x + 120, tb_y + 10, 30, 30, 8, 0x004CAF50); 
-    draw_rounded_rect(tb_x + 170, tb_y + 10, 30, 30, 8, 0x009C27B0); 
+    draw_rounded_rect(tb_x + 70, tb_y + 10, 30, 30, 8, 0x00FFB300); // Explorer
+    draw_rounded_rect(tb_x + 120, tb_y + 10, 30, 30, 8, 0x004CAF50); // SysMon
+    draw_rounded_rect(tb_x + 170, tb_y + 10, 30, 30, 8, 0x009C27B0); // Terminal
+    
+    // NAYA (Day 124): Calculator Icon
+    draw_rounded_rect(tb_x + 220, tb_y + 10, 30, 30, 8, 0x00E53935); // Calc (Red)
+    draw_hd_string("C", tb_x + 228, tb_y + 16, COLOR_TEXT, 2);
 
-    // Convert Time to String manually
+    // DAY 125: ACTIVE APP INDICATOR (White line under open app icon)
+    if (active_app == 2) draw_rounded_rect(tb_x + 75, tb_y + 45, 20, 3, 1, 0xFFFFFF);
+    if (active_app == 3) draw_rounded_rect(tb_x + 125, tb_y + 45, 20, 3, 1, 0xFFFFFF);
+    if (active_app == 1) draw_rounded_rect(tb_x + 175, tb_y + 45, 20, 3, 1, 0xFFFFFF);
+    if (active_app == 5) draw_rounded_rect(tb_x + 225, tb_y + 45, 20, 3, 1, 0xFFFFFF);
+
     char time_str[6] = {'0','0',':','0','0','\0'};
-    time_str[0] = (h / 10) + '0';
-    time_str[1] = (h % 10) + '0';
-    time_str[3] = (m / 10) + '0';
-    time_str[4] = (m % 10) + '0';
-
+    time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0';
+    time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
     draw_hd_string(time_str, tb_x + tb_width - 80, tb_y + 18, COLOR_TEXT, 2);
 }
 
@@ -102,9 +104,6 @@ void draw_hd_window(int win_x, int win_y, int w, int h, char* title) {
     draw_hd_string(title, win_x + 15, win_y + 8, COLOR_TEXT, 2);
     draw_rounded_rect(win_x + w - 30, win_y + 8, 15, 15, 5, COLOR_DANGER);
 }
-
-// ... (Upar ka code jahan draw_hd_window khatam hota hai) ...
-
 // ----------------------------------------------------
 // DAY 116: HD TERMINAL HISTORY ENGINE
 // ----------------------------------------------------
@@ -145,73 +144,87 @@ void hd_itoa(int n, char* buf) {
     buf[i] = '\0';
     for(j = 0; j < i/2; j++) { char t = buf[j]; buf[j] = buf[i - 1 - j]; buf[i - 1 - j] = t; }
 }
-
-// ----------------------------------------------------
-// DAY 121, 122 & 123: THE ULTIMATE DESKTOP RENDERER
-// Naye parameters: ctx_open, ctx_x, ctx_y
-// ----------------------------------------------------
-void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char* term_buffer, int h, int m, int start_menu, unsigned int used_ram, int ctx_open, int ctx_x, int ctx_y) {
+void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char* term_buffer, int h, int m, int start_menu, unsigned int used_ram, int ctx_open, int ctx_x, int ctx_y, int is_minimized, char* calc_display) {
     // 1. Fill background 
     for (int i = 0; i < (1024 * 768); i++) {
         high_res_buffer[i] = COLOR_DARK_BG;
     }
     
-    // ----------------------------------------------------
-    // DAY 121: DRAW DESKTOP ICONS
-    // ----------------------------------------------------
-    draw_rounded_rect(20, 20, 40, 40, 5, 0x00FFB300); // My PC Icon (Yellow)
+    // DESKTOP ICONS
+    draw_rounded_rect(20, 20, 40, 40, 5, 0x00FFB300); // My PC
     draw_hd_string("My PC", 15, 65, COLOR_TEXT, 1);
-    
-    draw_rounded_rect(20, 100, 40, 40, 5, 0x004CAF50); // Notepad Icon (Green)
+    draw_rounded_rect(20, 100, 40, 40, 5, 0x004CAF50); // Notepad
     draw_hd_string("Notes", 18, 145, COLOR_TEXT, 1);
+    
+    // NAYA: Calculator Desktop Icon
+    draw_rounded_rect(20, 180, 40, 40, 5, 0x00E53935); // Calc
+    draw_hd_string("Calc", 22, 225, COLOR_TEXT, 1);
 
     // 2. Draw Taskbar
-    draw_modern_taskbar(h, m);
+    draw_modern_taskbar(h, m, app_state);
     
-    // 3. Draw App Windows
-    if (app_state == 1) { // TERMINAL
-        draw_hd_window(win_x, win_y, 420, 300, "Terminal - Root");
-        for(int i = 0; i < hd_term_lines; i++) {
-            draw_hd_string(hd_term_history[i], win_x + 15, win_y + 40 + (i * 25), COLOR_TEXT, 2);
+    // 3. Draw App Windows (Only if NOT minimized!)
+    if (app_state > 0 && !is_minimized) {
+        if (app_state == 1) { // TERMINAL
+            draw_hd_window(win_x, win_y, 420, 300, "Terminal - Root");
+            for(int i = 0; i < hd_term_lines; i++) {
+                draw_hd_string(hd_term_history[i], win_x + 15, win_y + 40 + (i * 25), COLOR_TEXT, 2);
+            }
+            int current_y = win_y + 40 + (hd_term_lines * 25);
+            draw_hd_string("root@microos:~# ", win_x + 15, current_y, 0x004CAF50, 2);
+            draw_hd_string(term_buffer, win_x + 155, current_y, COLOR_TEXT, 2);
+        } 
+        else if (app_state == 2) { // FILE EXPLORER
+            draw_hd_window(win_x, win_y, 400, 300, "File Explorer");
+            char count_str[5]; hd_itoa(file_count, count_str);
+            draw_hd_string("Virtual Disk (Total Files: ", win_x + 20, win_y + 50, COLOR_TEXT, 2);
+            draw_hd_string(count_str, win_x + 280, win_y + 50, COLOR_ACCENT, 2);
+            draw_hd_string(")", win_x + 300, win_y + 50, COLOR_TEXT, 2);
+            for(int f = 0; f < file_count && f < 5; f++) {
+                draw_rounded_rect(win_x + 20, win_y + 90 + (f * 40), 30, 30, 5, 0x00FFB300); 
+                draw_hd_string(file_system[f].name, win_x + 60, win_y + 95 + (f * 40), COLOR_TEXT, 2);
+            }
         }
-        int current_y = win_y + 40 + (hd_term_lines * 25);
-        draw_hd_string("root@microos:~# ", win_x + 15, current_y, 0x004CAF50, 2);
-        draw_hd_string(term_buffer, win_x + 155, current_y, COLOR_TEXT, 2);
-    } 
-    else if (app_state == 2) { // FILE EXPLORER
-        draw_hd_window(win_x, win_y, 400, 300, "File Explorer");
-        char count_str[5]; hd_itoa(file_count, count_str);
-        draw_hd_string("Virtual Disk (Total Files: ", win_x + 20, win_y + 50, COLOR_TEXT, 2);
-        draw_hd_string(count_str, win_x + 280, win_y + 50, COLOR_ACCENT, 2);
-        draw_hd_string(")", win_x + 300, win_y + 50, COLOR_TEXT, 2);
-        
-        for(int f = 0; f < file_count && f < 5; f++) {
-            draw_rounded_rect(win_x + 20, win_y + 90 + (f * 40), 30, 30, 5, 0x00FFB300); 
-            draw_hd_string(file_system[f].name, win_x + 60, win_y + 95 + (f * 40), COLOR_TEXT, 2);
+        else if (app_state == 3) { // SYSTEM MONITOR
+            draw_hd_window(win_x, win_y, 400, 300, "System Monitor");
+            draw_hd_string("Micro OS Performance", win_x + 20, win_y + 50, COLOR_ACCENT, 2);
+            draw_hd_string("RAM Usage:", win_x + 20, win_y + 90, COLOR_TEXT, 2);
+            char ram_str[15]; hd_itoa(used_ram, ram_str);
+            draw_hd_string(ram_str, win_x + 20, win_y + 120, 0x004CAF50, 2);
+            draw_hd_string(" Bytes", win_x + 100, win_y + 120, COLOR_TEXT, 2);
+            draw_rounded_rect(win_x + 20, win_y + 150, 300, 20, 5, 0x00111111); 
+            draw_rounded_rect(win_x + 20, win_y + 150, (used_ram / 500) + 10, 20, 5, 0x004CAF50); 
         }
-    }
-    else if (app_state == 3) { // SYSTEM MONITOR
-        draw_hd_window(win_x, win_y, 400, 300, "System Monitor");
-        draw_hd_string("Micro OS Performance", win_x + 20, win_y + 50, COLOR_ACCENT, 2);
-        draw_hd_string("RAM Usage:", win_x + 20, win_y + 90, COLOR_TEXT, 2);
-        
-        char ram_str[15]; hd_itoa(used_ram, ram_str);
-        draw_hd_string(ram_str, win_x + 20, win_y + 120, 0x004CAF50, 2);
-        draw_hd_string(" Bytes", win_x + 100, win_y + 120, COLOR_TEXT, 2);
-        
-        draw_rounded_rect(win_x + 20, win_y + 150, 300, 20, 5, 0x00111111); 
-        draw_rounded_rect(win_x + 20, win_y + 150, (used_ram / 500) + 10, 20, 5, 0x004CAF50); 
-    }
-    else if (app_state == 4) { // DAY 123: HD NOTEPAD
-        draw_hd_window(win_x, win_y, 400, 300, "HD Notepad");
-        draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 2);
-        draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 2);
+        else if (app_state == 4) { // NOTEPAD
+            draw_hd_window(win_x, win_y, 400, 300, "HD Notepad");
+            draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 2);
+            draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 2);
+        }
+        else if (app_state == 5) { // DAY 124: HD CALCULATOR APP
+            draw_hd_window(win_x, win_y, 300, 360, "Calculator");
+            
+            // Screen
+            draw_rounded_rect(win_x + 20, win_y + 45, 260, 50, 5, 0x00111111);
+            int len = 0; while(calc_display[len]) len++;
+            draw_hd_string(calc_display, win_x + 260 - (len * 16), win_y + 55, COLOR_TEXT, 3);
+            
+            // Buttons
+            char* keys = "789/456*123-C0=+";
+            for(int i=0; i<4; i++) {
+                for(int j=0; j<4; j++) {
+                    int bx = win_x + 20 + (j * 65);
+                    int by = win_y + 105 + (i * 60);
+                    draw_rounded_rect(bx, by, 55, 50, 5, 0x00333333);
+                    char lbl[2] = {keys[(i*4)+j], '\0'};
+                    draw_hd_string(lbl, bx + 22, by + 16, COLOR_TEXT, 2);
+                }
+            }
+        }
     }
 
     // 4. DRAW START MENU
     if (start_menu) {
-        int sm_w = 220, sm_h = 300;
-        int sm_x = 120, sm_y = 708 - sm_h - 10;
+        int sm_w = 220, sm_h = 300, sm_x = 120, sm_y = 708 - sm_h - 10;
         draw_rounded_rect(sm_x + 5, sm_y + 5, sm_w, sm_h, 10, 0x00111111);
         draw_rounded_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00252526);
         draw_hd_string("Micro OS v3.0", sm_x + 20, sm_y + 20, COLOR_ACCENT, 2);
@@ -222,18 +235,16 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         draw_hd_string("SHUT DOWN", sm_x + 55, sm_y + 252, COLOR_TEXT, 2);
     }
 
-    // ----------------------------------------------------
-    // DAY 122: DRAW CONTEXT MENU (Right-Click)
-    // ----------------------------------------------------
+    // 5. DRAW CONTEXT MENU
     if (ctx_open) {
-        draw_rounded_rect(ctx_x + 5, ctx_y + 5, 160, 120, 5, 0x00111111); // Shadow
-        draw_rounded_rect(ctx_x, ctx_y, 160, 120, 5, 0x002D2D30);         // Menu BG
+        draw_rounded_rect(ctx_x + 5, ctx_y + 5, 160, 120, 5, 0x00111111); 
+        draw_rounded_rect(ctx_x, ctx_y, 160, 120, 5, 0x002D2D30);         
         draw_hd_string("> Refresh", ctx_x + 15, ctx_y + 15, COLOR_TEXT, 2);
         draw_hd_string("> Terminal", ctx_x + 15, ctx_y + 50, COLOR_TEXT, 2);
         draw_hd_string("> System", ctx_x + 15, ctx_y + 85, COLOR_TEXT, 2);
     }
 
-    // 5. Draw mouse on top
+    // 6. Draw mouse on top
     draw_hd_mouse_pointer(mx, my);
     swap_buffers_32();
 }
