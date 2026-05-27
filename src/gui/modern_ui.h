@@ -3,7 +3,7 @@
 
 #include "vesa.h"
 
-// 8x8 Smooth Font Array (Omitted for brevity in text, but full array is here)
+// 8x8 Smooth Font Array
 const unsigned char modern_font[91][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, {0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00}, {0x6C,0x6C,0x6C,0x00,0x00,0x00,0x00,0x00}, {0x6C,0x6C,0xFE,0x6C,0xFE,0x6C,0x6C,0x00}, {0x18,0x7E,0xC0,0x7C,0x06,0xFC,0x18,0x00}, {0x00,0xC6,0xCC,0x18,0x30,0x66,0xC6,0x00}, {0x38,0x6C,0x38,0x76,0xDC,0xCC,0x76,0x00}, {0x30,0x30,0x60,0x00,0x00,0x00,0x00,0x00}, {0x18,0x30,0x60,0x60,0x60,0x30,0x18,0x00}, {0x60,0x30,0x18,0x18,0x18,0x30,0x60,0x00}, {0x00,0x66,0x3C,0xFF,0x3C,0x66,0x00,0x00}, {0x00,0x18,0x18,0x7E,0x18,0x18,0x00,0x00}, {0x00,0x00,0x00,0x00,0x00,0x18,0x18,0x30}, {0x00,0x00,0x00,0x7E,0x00,0x00,0x00,0x00}, {0x00,0x00,0x00,0x00,0x00,0x18,0x18,0x00}, {0x06,0x0C,0x18,0x30,0x60,0xC0,0x80,0x00}, {0x7C,0xC6,0xCE,0xDE,0xF6,0xE6,0x7C,0x00}, {0x30,0x70,0x30,0x30,0x30,0x30,0xFC,0x00}, {0x78,0xCC,0x0C,0x38,0x60,0xCC,0xFC,0x00}, {0x78,0xCC,0x0C,0x38,0x0C,0xCC,0x78,0x00}, {0x1C,0x3C,0x6C,0xCC,0xFE,0x0C,0x1E,0x00}, {0xFC,0xC0,0xF8,0x0C,0x0C,0xCC,0x78,0x00}, {0x38,0x60,0xC0,0xF8,0xCC,0xCC,0x78,0x00}, {0xFC,0xCC,0x0C,0x18,0x30,0x30,0x30,0x00}, {0x78,0xCC,0xCC,0x78,0xCC,0xCC,0x78,0x00}, {0x78,0xCC,0xCC,0x7C,0x0C,0x18,0x70,0x00}, {0x00,0x18,0x18,0x00,0x00,0x18,0x18,0x00}, {0x00,0x18,0x18,0x00,0x00,0x18,0x18,0x30}, {0x18,0x30,0x60,0xC0,0x60,0x30,0x18,0x00}, {0x00,0x00,0x7E,0x00,0x7E,0x00,0x00,0x00}, {0x60,0x30,0x18,0x0C,0x18,0x30,0x60,0x00}, {0x3C,0x66,0x0C,0x18,0x18,0x00,0x18,0x00}, {0x7C,0xC6,0xDE,0xDE,0xDC,0xC0,0x7C,0x00}, {0x38,0x6C,0xC6,0xFE,0xC6,0xC6,0xC6,0x00}, {0xFC,0x66,0x66,0x7C,0x66,0x66,0xFC,0x00}, {0x3C,0x66,0xC0,0xC0,0xC0,0x66,0x3C,0x00}, {0xF8,0x6C,0x66,0x66,0x66,0x6C,0xF8,0x00}, {0xFE,0x62,0x68,0x78,0x68,0x62,0xFE,0x00}, {0xFE,0x62,0x68,0x78,0x68,0x60,0xF0,0x00}, {0x3C,0x66,0xC0,0xCE,0xC6,0x66,0x3E,0x00}, {0xC6,0xC6,0xC6,0xFE,0xC6,0xC6,0xC6,0x00}, {0x3C,0x18,0x18,0x18,0x18,0x18,0x3C,0x00}, {0x1E,0x0C,0x0C,0x0C,0xCC,0xCC,0x78,0x00}, {0xE6,0x66,0x6C,0x78,0x6C,0x66,0xE6,0x00}, {0xF0,0x60,0x60,0x60,0x62,0x66,0xFE,0x00}, {0xC6,0xEE,0xFE,0xFE,0xD6,0xC6,0xC6,0x00}, {0xC6,0xE6,0xF6,0xDE,0xCE,0xC6,0xC6,0x00}, {0x38,0x6C,0xC6,0xC6,0xC6,0x6C,0x38,0x00}, {0xFC,0x66,0x66,0x7C,0x60,0x60,0xF0,0x00}, {0x7C,0xC6,0xC6,0xC6,0xD6,0x7C,0x0E,0x00}, {0xFC,0x66,0x66,0x7C,0x6C,0x66,0xE6,0x00}, {0x7C,0xC6,0xE0,0x78,0x0E,0xC6,0x3E,0x00}, {0xFC,0xB4,0x30,0x30,0x30,0x30,0x78,0x00}, {0xC6,0xC6,0xC6,0xC6,0xC6,0xC6,0x7C,0x00}, {0xC6,0xC6,0xC6,0xC6,0xC6,0x6C,0x38,0x00}, {0xC6,0xC6,0xC6,0xD6,0xFE,0xEE,0xC6,0x00}, {0xC6,0xC6,0x6C,0x38,0x6C,0xC6,0xC6,0x00}, {0x66,0x66,0x66,0x3C,0x18,0x18,0x3C,0x00}, {0xFE,0x86,0x0C,0x18,0x30,0x61,0xFE,0x00}, {0x3C,0x30,0x30,0x30,0x30,0x30,0x3C,0x00}, {0x00,0x80,0xC0,0x60,0x30,0x18,0x0C,0x06}, {0x3C,0x0C,0x0C,0x0C,0x0C,0x0C,0x3C,0x00}, {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, {0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x00}, {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, {0x00,0x00,0x78,0x0C,0x7C,0xCC,0x76,0x00}, {0xE0,0x60,0x60,0x7C,0x66,0x66,0xDC,0x00}, {0x00,0x00,0x78,0xCC,0xC0,0xCC,0x78,0x00}, {0x1C,0x0C,0x0C,0x7C,0xCC,0xCC,0x76,0x00}, {0x00,0x00,0x78,0xCC,0xFC,0xC0,0x78,0x00}, {0x38,0x6C,0x60,0xF0,0x60,0x60,0xF0,0x00}, {0x00,0x00,0x76,0xCC,0xCC,0x7C,0x0C,0xF8}, {0xE0,0x60,0x6C,0x76,0x66,0x66,0xE6,0x00}, {0x18,0x00,0x38,0x18,0x18,0x18,0x3C,0x00}, {0x06,0x00,0x06,0x06,0x06,0x06,0x06,0x3C}, {0xE0,0x60,0x66,0x6C,0x78,0x6C,0xE6,0x00}, {0x38,0x18,0x18,0x18,0x18,0x18,0x3C,0x00}, {0x00,0x00,0xEC,0xFE,0xD6,0xD6,0xD6,0x00}, {0x00,0x00,0xDC,0x66,0x66,0x66,0x66,0x00}, {0x00,0x00,0x78,0xCC,0xCC,0xCC,0x78,0x00}, {0x00,0x00,0xDC,0x66,0x66,0x7C,0x60,0xF0}, {0x00,0x00,0x76,0xCC,0xCC,0x7C,0x0C,0x1E}, {0x00,0x00,0xDC,0x76,0x60,0x60,0xF0,0x00}, {0x00,0x00,0x7C,0xC0,0x78,0x0C,0xF8,0x00}, {0x10,0x30,0x7C,0x30,0x30,0x34,0x18,0x00}, {0x00,0x00,0xCC,0xCC,0xCC,0xCC,0x76,0x00}, {0x00,0x00,0xCC,0xCC,0xCC,0x78,0x30,0x00}, {0x00,0x00,0xC6,0xD6,0xFE,0xFE,0x6C,0x00}, {0x00,0x00,0xC6,0x6C,0x38,0x6C,0xC6,0x00}, {0x00,0x00,0xCC,0xCC,0xCC,0x7C,0x0C,0xF8}, {0x00,0x00,0xFC,0x98,0x30,0x64,0xFC,0x00}  
 };
@@ -36,64 +36,24 @@ void draw_hd_mouse_pointer(int x, int y) {
     }
 }
 
-// ----------------------------------------------------
-// DAY 141: GEOMETRIC APP ICON ENGINE
-// ----------------------------------------------------
 void draw_app_icon(int x, int y, int type) {
-    // Basic drop shadow for all icons
-    draw_rounded_rect(x+2, y+2, 40, 40, 8, 0x00111111);
-    
-    if (type == 0) { // My PC / Explorer (Folder)
-        draw_rounded_rect(x, y+5, 40, 30, 4, 0x00E65100);  // Dark Orange Back
-        draw_rounded_rect(x, y+10, 40, 25, 4, 0x00FFB300); // Yellow Front
-        draw_rounded_rect(x+5, y+5, 15, 10, 2, 0x00FFB300); // Folder Tab
-    } 
-    else if (type == 1) { // Notes
-        draw_rounded_rect(x+5, y, 30, 40, 3, 0x00FFFFFF); // Paper
-        draw_rounded_rect(x+5, y, 30, 10, 3, 0x004CAF50); // Green Header
-        draw_rounded_rect(x+10, y+15, 20, 2, 0, 0x00E0E0E0); // Lines
-        draw_rounded_rect(x+10, y+23, 20, 2, 0, 0x00E0E0E0);
-        draw_rounded_rect(x+10, y+31, 15, 2, 0, 0x00E0E0E0);
-    } 
-    else if (type == 2) { // Calculator
-        draw_rounded_rect(x, y, 40, 40, 8, 0x00263238); // Dark Body
-        draw_rounded_rect(x+5, y+5, 30, 10, 2, 0x0081C784); // Screen
-        draw_rounded_rect(x+6, y+20, 7, 7, 2, 0x00E53935); // Red btn
-        draw_rounded_rect(x+16, y+20, 7, 7, 2, 0x00B0BEC5); // Gray btns
-        draw_rounded_rect(x+26, y+20, 7, 7, 2, 0x00B0BEC5);
-        draw_rounded_rect(x+6, y+29, 7, 7, 2, 0x00B0BEC5);
-        draw_rounded_rect(x+16, y+29, 7, 7, 2, 0x00B0BEC5);
-        draw_rounded_rect(x+26, y+29, 7, 7, 2, 0x002196F3); // Blue equal
-    } 
-    else if (type == 3) { // Game (Gamepad)
-        draw_rounded_rect(x, y, 40, 40, 8, 0x002196F3); // Blue Body
-        draw_rounded_rect(x+6, y+16, 12, 4, 1, 0x00FFFFFF); // D-pad H
-        draw_rounded_rect(x+10, y+12, 4, 12, 1, 0x00FFFFFF); // D-pad V
-        draw_rounded_rect(x+22, y+18, 6, 6, 3, 0x00E53935); // A Btn
-        draw_rounded_rect(x+30, y+12, 6, 6, 3, 0x00FFEB3B); // B Btn
-    } 
-    else if (type == 4) { // Settings (Gear)
-        draw_rounded_rect(x, y, 40, 40, 8, 0x0078909C); // Gray Body
-        draw_rounded_rect(x+10, y+10, 20, 20, 10, 0x0037474F); // Gear Outer
-        draw_rounded_rect(x+15, y+15, 10, 10, 5, 0x0078909C); // Gear Inner
-    } 
-    else if (type == 5) { // Piano
-        draw_rounded_rect(x, y, 40, 40, 5, 0x009C27B0); // Purple Body
-        draw_rounded_rect(x+4, y+10, 8, 20, 1, 0x00FFFFFF); // Keys
-        draw_rounded_rect(x+16, y+10, 8, 20, 1, 0x00FFFFFF);
-        draw_rounded_rect(x+28, y+10, 8, 20, 1, 0x00FFFFFF);
-        draw_rounded_rect(x+10, y+10, 6, 10, 1, 0x00000000); // Black Keys
-        draw_rounded_rect(x+22, y+10, 6, 10, 1, 0x00000000);
-    }
-    else if (type == 6) { // Task Manager
-        draw_rounded_rect(x, y, 40, 40, 8, 0x001E1E1E); 
-        draw_rounded_rect(x+6, y+20, 6, 15, 1, 0x004CAF50); // Bars
-        draw_rounded_rect(x+16, y+10, 6, 25, 1, 0x004CAF50);
-        draw_rounded_rect(x+26, y+15, 6, 20, 1, 0x004CAF50);
-    }
-    else if (type == 7) { // Terminal
-        draw_rounded_rect(x, y, 40, 40, 8, 0x00000000); 
-        draw_hd_string(">_", x+8, y+12, 0x004CAF50, 1);
+    draw_rounded_rect(x+2, y+2, 40, 40, 8, 0x00111111); // Shadow
+    if (type == 0) { // Explorer (Folder)
+        draw_rounded_rect(x, y+5, 40, 30, 4, 0x00E65100); draw_rounded_rect(x, y+10, 40, 25, 4, 0x00FFB300); draw_rounded_rect(x+5, y+5, 15, 10, 2, 0x00FFB300); 
+    } else if (type == 1) { // Notes
+        draw_rounded_rect(x+5, y, 30, 40, 3, 0x00FFFFFF); draw_rounded_rect(x+5, y, 30, 10, 3, 0x004CAF50); draw_rounded_rect(x+10, y+15, 20, 2, 0, 0x00E0E0E0); draw_rounded_rect(x+10, y+23, 20, 2, 0, 0x00E0E0E0); draw_rounded_rect(x+10, y+31, 15, 2, 0, 0x00E0E0E0);
+    } else if (type == 2) { // Calculator
+        draw_rounded_rect(x, y, 40, 40, 8, 0x00263238); draw_rounded_rect(x+5, y+5, 30, 10, 2, 0x0081C784); draw_rounded_rect(x+6, y+20, 7, 7, 2, 0x00E53935); draw_rounded_rect(x+16, y+20, 7, 7, 2, 0x00B0BEC5); draw_rounded_rect(x+26, y+20, 7, 7, 2, 0x00B0BEC5); draw_rounded_rect(x+6, y+29, 7, 7, 2, 0x00B0BEC5); draw_rounded_rect(x+16, y+29, 7, 7, 2, 0x00B0BEC5); draw_rounded_rect(x+26, y+29, 7, 7, 2, 0x002196F3); 
+    } else if (type == 3) { // Game
+        draw_rounded_rect(x, y, 40, 40, 8, 0x002196F3); draw_rounded_rect(x+6, y+16, 12, 4, 1, 0x00FFFFFF); draw_rounded_rect(x+10, y+12, 4, 12, 1, 0x00FFFFFF); draw_rounded_rect(x+22, y+18, 6, 6, 3, 0x00E53935); draw_rounded_rect(x+30, y+12, 6, 6, 3, 0x00FFEB3B); 
+    } else if (type == 4) { // Settings
+        draw_rounded_rect(x, y, 40, 40, 8, 0x0078909C); draw_rounded_rect(x+10, y+10, 20, 20, 10, 0x0037474F); draw_rounded_rect(x+15, y+15, 10, 10, 5, 0x0078909C); 
+    } else if (type == 5) { // Piano
+        draw_rounded_rect(x, y, 40, 40, 5, 0x009C27B0); draw_rounded_rect(x+4, y+10, 8, 20, 1, 0x00FFFFFF); draw_rounded_rect(x+16, y+10, 8, 20, 1, 0x00FFFFFF); draw_rounded_rect(x+28, y+10, 8, 20, 1, 0x00FFFFFF); draw_rounded_rect(x+10, y+10, 6, 10, 1, 0x00000000); draw_rounded_rect(x+22, y+10, 6, 10, 1, 0x00000000);
+    } else if (type == 6) { // Task Manager
+        draw_rounded_rect(x, y, 40, 40, 8, 0x001E1E1E); draw_rounded_rect(x+6, y+20, 6, 15, 1, 0x004CAF50); draw_rounded_rect(x+16, y+10, 6, 25, 1, 0x004CAF50); draw_rounded_rect(x+26, y+15, 6, 20, 1, 0x004CAF50);
+    } else if (type == 7) { // Terminal
+        draw_rounded_rect(x, y, 40, 40, 8, 0x00000000); draw_hd_string(">_", x+8, y+12, 0x004CAF50, 1);
     }
 }
 
@@ -109,30 +69,31 @@ void draw_gradient_wallpaper(int theme_idx) {
     }
 }
 
+// ----------------------------------------------------
+// DAY 142 FIX: PERFECT TASKBAR MAPPING
+// ----------------------------------------------------
 void draw_modern_taskbar(int h, int m, int active_app) {
     int tb_width = 800, tb_height = 50, tb_x = (1024 - tb_width) / 2, tb_y = 768 - tb_height - 10;  
     
     draw_rounded_rect(tb_x + 2, tb_y + 4, tb_width, tb_height, 10, 0x00111111);
     draw_rounded_rect(tb_x, tb_y, tb_width, tb_height, 10, 0x00202020);      
-    
     draw_rounded_rect(tb_x + 20, tb_y + 10, 30, 30, 8, COLOR_ACCENT); draw_hd_string("M", tb_x + 26, tb_y + 18, COLOR_TEXT, 1);
 
-    // DAY 141: ICONS ON TASKBAR INSTEAD OF BLOCKS
-    draw_app_icon(tb_x + 70, tb_y + 5, 0);  // Explorer
-    draw_app_icon(tb_x + 120, tb_y + 5, 6); // Task Manager
-    draw_app_icon(tb_x + 170, tb_y + 5, 7); // Terminal
-    draw_app_icon(tb_x + 220, tb_y + 5, 2); // Calc
-    draw_app_icon(tb_x + 270, tb_y + 5, 3); // Game
-    draw_app_icon(tb_x + 320, tb_y + 5, 4); // Settings
+    // X-Offsets: 70, 120, 170, 220, 270, 320
+    draw_app_icon(tb_x + 70, tb_y + 5, 0);  // Explorer (App State 2)
+    draw_app_icon(tb_x + 120, tb_y + 5, 6); // SysMon (App State 3)
+    draw_app_icon(tb_x + 170, tb_y + 5, 7); // Terminal (App State 1)
+    draw_app_icon(tb_x + 220, tb_y + 5, 2); // Calc (App State 5)
+    draw_app_icon(tb_x + 270, tb_y + 5, 3); // Game (App State 6)
+    draw_app_icon(tb_x + 320, tb_y + 5, 4); // Settings (App State 8)
 
-    if (active_app == 2) draw_rounded_rect(tb_x + 80, tb_y + 45, 20, 3, 1, 0xFFFFFF);
-    if (active_app == 3) draw_rounded_rect(tb_x + 130, tb_y + 45, 20, 3, 1, 0xFFFFFF);
-    if (active_app == 1) draw_rounded_rect(tb_x + 180, tb_y + 45, 20, 3, 1, 0xFFFFFF);
-    if (active_app == 5) draw_rounded_rect(tb_x + 230, tb_y + 45, 20, 3, 1, 0xFFFFFF);
-    if (active_app == 6) draw_rounded_rect(tb_x + 280, tb_y + 45, 20, 3, 1, 0xFFFFFF);
-    if (active_app == 8) draw_rounded_rect(tb_x + 330, tb_y + 45, 20, 3, 1, 0xFFFFFF); 
-    if (active_app == 7) draw_rounded_rect(tb_x + 20, tb_y + 45, 30, 3, 1, 0xFFFFFF); // Paint
-    if (active_app == 9) draw_rounded_rect(tb_x + 20, tb_y + 45, 30, 3, 1, 0xFFFFFF); // Piano
+    // Perfectly matched indicators
+    if (active_app == 2) draw_rounded_rect(tb_x + 80, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Exp
+    if (active_app == 3) draw_rounded_rect(tb_x + 130, tb_y + 45, 20, 3, 1, 0xFFFFFF); // SysMon
+    if (active_app == 1) draw_rounded_rect(tb_x + 180, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Term
+    if (active_app == 5) draw_rounded_rect(tb_x + 230, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Calc
+    if (active_app == 6) draw_rounded_rect(tb_x + 280, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Game
+    if (active_app == 8) draw_rounded_rect(tb_x + 330, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Sets
 
     char time_str[6] = {'0','0',':','0','0','\0'};
     time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0'; time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
@@ -164,8 +125,7 @@ void hd_itoa(int n, char* buf) {
     for(j = 0; j < i/2; j++) { char t = buf[j]; buf[j] = buf[i - 1 - j]; buf[i - 1 - j] = t; }
 }
 
-unsigned int hd_paint_canvas[260 * 200];
-int paint_init = 0;
+unsigned int hd_paint_canvas[260 * 200]; int paint_init = 0;
 
 void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char* term_buffer, int h, int m, int start_menu, unsigned int used_ram, int ctx_open, int ctx_x, int ctx_y, int is_minimized, char* calc_display, int theme_idx, int* game_board, int game_winner, int is_screensaver, int ss_x, int ss_y, int* icon_x, int* icon_y, char* pwd_buffer, int uptime) {
     
@@ -190,7 +150,6 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
 
     draw_gradient_wallpaper(theme_idx);
     
-    // DAY 141: DESKTOP PIXEL ICONS
     draw_app_icon(icon_x[0], icon_y[0], 0); draw_hd_string("My PC", icon_x[0], icon_y[0]+45, 0xFFFFFF, 1);
     draw_app_icon(icon_x[1], icon_y[1], 1); draw_hd_string("Notes", icon_x[1], icon_y[1]+45, 0xFFFFFF, 1);
     draw_app_icon(icon_x[2], icon_y[2], 2); draw_hd_string("Calc", icon_x[2]+4, icon_y[2]+45, 0xFFFFFF, 1);
@@ -212,34 +171,22 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
             char count_str[5]; hd_itoa(file_count, count_str);
             draw_hd_string("Virtual Disk (Total Files: ", win_x + 20, win_y + 50, COLOR_TEXT, 1); draw_hd_string(count_str, win_x + 250, win_y + 50, COLOR_ACCENT, 1); draw_hd_string(")", win_x + 270, win_y + 50, COLOR_TEXT, 1);
             for(int f = 0; f < file_count && f < 5; f++) {
-                draw_app_icon(win_x + 20, win_y + 80 + (f * 45), 1); // File icon
-                draw_hd_string(file_system[f].name, win_x + 70, win_y + 95 + (f * 45), COLOR_TEXT, 1);
+                draw_app_icon(win_x + 20, win_y + 80 + (f * 45), 1); draw_hd_string(file_system[f].name, win_x + 70, win_y + 95 + (f * 45), COLOR_TEXT, 1);
             }
         }
         else if (app_state == 3) { 
-            // DAY 140: THE ADVANCED TASK MANAGER UI!
             draw_hd_window(win_x, win_y, 450, 320, "Task Manager");
             draw_hd_string("CPU Performance (Simulated)", win_x + 20, win_y + 50, COLOR_TEXT, 1);
             draw_rounded_rect(win_x + 20, win_y + 70, 410, 80, 5, 0x00111111);
-            // Draw simulated CPU graph wave
             for(int i=0; i<400; i+=10) draw_rounded_rect(win_x+25+i, win_y+140 - (i%40), 5, (i%40)+5, 2, 0x004CAF50);
-
             draw_hd_string("Memory (RAM)", win_x + 20, win_y + 170, COLOR_TEXT, 1);
             char ram_str[15]; hd_itoa(used_ram/1024, ram_str); 
-            draw_hd_string(ram_str, win_x + 20, win_y + 190, 0x002196F3, 2);
-            draw_hd_string(" KB In Use", win_x + 140, win_y + 195, COLOR_TEXT, 1);
-
+            draw_hd_string(ram_str, win_x + 20, win_y + 190, 0x002196F3, 2); draw_hd_string(" KB In Use", win_x + 140, win_y + 195, COLOR_TEXT, 1);
             draw_rounded_rect(win_x + 20, win_y + 230, 410, 20, 10, 0x00111111);
-            int ram_bar = (used_ram / 500); if(ram_bar > 410) ram_bar = 410;
-            draw_rounded_rect(win_x + 20, win_y + 230, ram_bar, 20, 10, 0x002196F3);
-
+            int ram_bar = (used_ram / 500); if(ram_bar > 410) ram_bar = 410; draw_rounded_rect(win_x + 20, win_y + 230, ram_bar, 20, 10, 0x002196F3);
             draw_hd_string("System Uptime:", win_x + 20, win_y + 270, COLOR_TEXT, 1);
-            char up_str[10]; hd_itoa(uptime, up_str);
-            draw_hd_string(up_str, win_x + 130, win_y + 270, COLOR_ACCENT, 1);
-            draw_hd_string("secs", win_x + 180, win_y + 270, COLOR_TEXT, 1);
-
-            draw_hd_string("Active Tasks: 8", win_x + 280, win_y + 270, COLOR_TEXT, 1);
-            draw_hd_string("Threads: 42", win_x + 280, win_y + 290, COLOR_TEXT, 1);
+            char up_str[10]; hd_itoa(uptime, up_str); draw_hd_string(up_str, win_x + 130, win_y + 270, COLOR_ACCENT, 1); draw_hd_string("secs", win_x + 180, win_y + 270, COLOR_TEXT, 1);
+            draw_hd_string("Active Tasks: 8", win_x + 280, win_y + 270, COLOR_TEXT, 1); draw_hd_string("Threads: 42", win_x + 280, win_y + 290, COLOR_TEXT, 1);
         }
         else if (app_state == 4) { 
             draw_hd_window(win_x, win_y, 400, 300, "HD Notepad");
@@ -285,12 +232,26 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         }
     }
 
+    // DAY 143: PREMIUM START MENU
     if (start_menu) {
-        int sm_w = 220, sm_h = 300, sm_x = 120, sm_y = 708 - sm_h - 10;
-        draw_rounded_rect(sm_x + 5, sm_y + 5, sm_w, sm_h, 10, 0x00111111); draw_rounded_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00252526);
-        draw_hd_string("Micro OS v3.0", sm_x + 20, sm_y + 20, COLOR_ACCENT, 1); draw_rounded_rect(sm_x + 20, sm_y + 50, sm_w - 40, 2, 0, 0x00444444); 
-        draw_hd_string("> Notepad", sm_x + 20, sm_y + 70, COLOR_TEXT, 1); draw_hd_string("> Calculator", sm_x + 20, sm_y + 100, COLOR_TEXT, 1); draw_hd_string("> Tic-Tac-Toe", sm_x + 20, sm_y + 130, COLOR_TEXT, 1); draw_hd_string("> Settings", sm_x + 20, sm_y + 160, 0x002196F3, 1); draw_hd_string("> HD Paint", sm_x + 20, sm_y + 190, 0x00E53935, 1);
-        draw_rounded_rect(sm_x + 20, sm_y + 240, sm_w - 40, 40, 5, COLOR_DANGER); draw_hd_string("SHUT DOWN", sm_x + 65, sm_y + 252, COLOR_TEXT, 1);
+        int sm_w = 240, sm_h = 320, sm_x = 120, sm_y = 708 - sm_h - 10;
+        draw_rounded_rect(sm_x + 5, sm_y + 5, sm_w, sm_h, 10, 0x00111111); 
+        draw_rounded_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00252526);
+        
+        draw_rounded_rect(sm_x+20, sm_y+20, 30, 30, 15, COLOR_ACCENT); 
+        draw_hd_string("Micro OS", sm_x + 60, sm_y + 28, 0xFFFFFF, 1);
+        draw_rounded_rect(sm_x + 20, sm_y + 60, sm_w - 40, 2, 0, 0x00444444); 
+        
+        draw_rounded_rect(sm_x+20, sm_y+80, 15, 15, 3, 0x004CAF50); draw_hd_string("Notepad", sm_x + 45, sm_y + 83, COLOR_TEXT, 1);
+        draw_rounded_rect(sm_x+20, sm_y+115, 15, 15, 3, 0x00E53935); draw_hd_string("Calculator", sm_x + 45, sm_y + 118, COLOR_TEXT, 1);
+        draw_rounded_rect(sm_x+20, sm_y+150, 15, 15, 3, 0x002196F3); draw_hd_string("Tic-Tac-Toe", sm_x + 45, sm_y + 153, COLOR_TEXT, 1);
+        draw_rounded_rect(sm_x+20, sm_y+185, 15, 15, 3, 0x009E9E9E); draw_hd_string("Settings", sm_x + 45, sm_y + 188, COLOR_TEXT, 1);
+        draw_rounded_rect(sm_x+20, sm_y+220, 15, 15, 3, 0x00FFB300); draw_hd_string("HD Paint", sm_x + 45, sm_y + 223, COLOR_TEXT, 1);
+
+        draw_rounded_rect(sm_x + 20, sm_y + 265, sm_w - 40, 35, 5, COLOR_DANGER); 
+        draw_hd_string("O", sm_x + 60, sm_y + 276, 0xFFFFFF, 1); 
+        draw_hd_string("|", sm_x + 63, sm_y + 272, 0xFFFFFF, 1); 
+        draw_hd_string("SHUT DOWN", sm_x + 85, sm_y + 276, 0xFFFFFF, 1);
     }
 
     if (ctx_open) {
