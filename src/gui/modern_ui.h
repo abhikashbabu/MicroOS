@@ -22,6 +22,7 @@ void draw_scaled_char(char c, int x, int y, unsigned int hex_color, int scale) {
         else if (c >= 'A' && c <= 'Z') pattern = font_alpha_hd[c - 'A'][row];
         else if (c >= 'a' && c <= 'z') pattern = font_alpha_hd[c - 'a'][row]; 
         else if (c == ':') pattern = font3x5_hd[10][row];
+        else if (c == '*') pattern = (row==2||row==3)?5:2; 
         else if (c == '.') pattern = (row==4)?2:0; 
         else return;
 
@@ -57,7 +58,7 @@ void draw_modern_taskbar(int h, int m, int active_app) {
     draw_rounded_rect(tb_x + 170, tb_y + 10, 30, 30, 8, 0x009C27B0); 
     draw_rounded_rect(tb_x + 220, tb_y + 10, 30, 30, 8, 0x00E53935); 
     draw_rounded_rect(tb_x + 270, tb_y + 10, 30, 30, 8, 0x002196F3); 
-    draw_rounded_rect(tb_x + 320, tb_y + 10, 30, 30, 8, 0x009E9E9E); // NAYA: Settings Icon on Taskbar
+    draw_rounded_rect(tb_x + 320, tb_y + 10, 30, 30, 8, 0x009E9E9E); 
 
     if (active_app == 2) draw_rounded_rect(tb_x + 75, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 3) draw_rounded_rect(tb_x + 125, tb_y + 45, 20, 3, 1, 0xFFFFFF);
@@ -65,7 +66,9 @@ void draw_modern_taskbar(int h, int m, int active_app) {
     if (active_app == 5) draw_rounded_rect(tb_x + 225, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 6) draw_rounded_rect(tb_x + 275, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 7) draw_rounded_rect(tb_x + 20, tb_y + 45, 30, 3, 1, 0xFFFFFF);
-    if (active_app == 8) draw_rounded_rect(tb_x + 325, tb_y + 45, 20, 3, 1, 0xFFFFFF); // Settings indicator
+    if (active_app == 8) draw_rounded_rect(tb_x + 325, tb_y + 45, 20, 3, 1, 0xFFFFFF); 
+    if (active_app == 9) draw_rounded_rect(tb_x + 20, tb_y + 45, 30, 3, 1, 0xFFFFFF); // Piano
+    if (active_app == 10) draw_rounded_rect(tb_x + 20, tb_y + 45, 30, 3, 1, 0xFFFFFF); // Gallery
 
     char time_str[6] = {'0','0',':','0','0','\0'};
     time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0'; time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
@@ -80,8 +83,7 @@ void draw_hd_window(int win_x, int win_y, int w, int h, char* title) {
     draw_rounded_rect(win_x + w - 30, win_y + 8, 15, 15, 5, COLOR_DANGER);
 }
 
-char hd_term_history[8][50]; 
-int hd_term_lines = 0;       
+char hd_term_history[8][50]; int hd_term_lines = 0;       
 void hd_print(char* text) {
     if (hd_term_lines >= 8) {
         for (int i = 1; i < 8; i++) { int c = 0; while (hd_term_history[i][c] != '\0') { hd_term_history[i-1][c] = hd_term_history[i][c]; c++; } hd_term_history[i-1][c] = '\0'; }
@@ -101,7 +103,7 @@ void hd_itoa(int n, char* buf) {
 unsigned int hd_paint_canvas[260 * 200];
 int paint_init = 0;
 
-void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char* term_buffer, int h, int m, int start_menu, unsigned int used_ram, int ctx_open, int ctx_x, int ctx_y, int is_minimized, char* calc_display, unsigned int theme_bg, int* game_board, int game_winner, int is_screensaver, int ss_x, int ss_y, int* icon_x, int* icon_y) {
+void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char* term_buffer, int h, int m, int start_menu, unsigned int used_ram, int ctx_open, int ctx_x, int ctx_y, int is_minimized, char* calc_display, unsigned int theme_bg, int* game_board, int game_winner, int is_screensaver, int ss_x, int ss_y, int* icon_x, int* icon_y, char* pwd_buffer) {
     
     if (is_screensaver) {
         for (int i = 0; i < (1024 * 768); i++) high_res_buffer[i] = 0x000000;
@@ -110,14 +112,27 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         return; 
     }
 
+    if (app_state == -1) {
+        for (int i = 0; i < (1024 * 768); i++) high_res_buffer[i] = 0x000F172A; 
+        char time_str[6] = {'0','0',':','0','0','\0'}; time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0'; time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
+        draw_hd_string(time_str, 380, 150, COLOR_ACCENT, 8); 
+        draw_rounded_rect(412, 300, 200, 250, 10, 0x001E293B); draw_rounded_rect(462, 330, 100, 100, 20, 0x003B82F6); 
+        draw_hd_string("A", 495, 360, 0xFFFFFF, 6); draw_hd_string("Abhikash", 460, 450, 0xFFFFFF, 2);
+        draw_rounded_rect(430, 490, 160, 35, 5, 0x000F172A); 
+        int p_len = 0; while(pwd_buffer[p_len]) p_len++;
+        if (p_len == 0) draw_hd_string("Enter PIN", 450, 500, 0x00475569, 2); else for(int i=0; i<p_len; i++) draw_hd_string("*", 450 + (i*15), 500, 0xFFFFFF, 2);
+        draw_hd_mouse_pointer(mx, my); swap_buffers_32(); return;
+    }
+
     for (int i = 0; i < (1024 * 768); i++) high_res_buffer[i] = theme_bg;
     
-    // DAY 132: DYNAMIC DESKTOP ICONS (Based on array coordinates)
+    // Desktop Icons (Now 6 Icons!)
     draw_rounded_rect(icon_x[0], icon_y[0], 40, 40, 5, 0x00FFB300); draw_hd_string("My PC", icon_x[0]-5, icon_y[0]+45, 0xFFFFFF, 1);
     draw_rounded_rect(icon_x[1], icon_y[1], 40, 40, 5, 0x004CAF50); draw_hd_string("Notes", icon_x[1]-5, icon_y[1]+45, 0xFFFFFF, 1);
     draw_rounded_rect(icon_x[2], icon_y[2], 40, 40, 5, 0x00E53935); draw_hd_string("Calc", icon_x[2]-2, icon_y[2]+45, 0xFFFFFF, 1);
     draw_rounded_rect(icon_x[3], icon_y[3], 40, 40, 5, 0x002196F3); draw_hd_string("Game", icon_x[3]-2, icon_y[3]+45, 0xFFFFFF, 1);
     draw_rounded_rect(icon_x[4], icon_y[4], 40, 40, 5, 0x009E9E9E); draw_hd_string("Sets", icon_x[4]-2, icon_y[4]+45, 0xFFFFFF, 1);
+    draw_rounded_rect(icon_x[5], icon_y[5], 40, 40, 5, 0x009C27B0); draw_hd_string("Piano", icon_x[5]-5, icon_y[5]+45, 0xFFFFFF, 1);
 
     draw_modern_taskbar(h, m, app_state);
     
@@ -131,8 +146,7 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         else if (app_state == 2) { 
             draw_hd_window(win_x, win_y, 400, 300, "File Explorer");
             char count_str[5]; hd_itoa(file_count, count_str);
-            draw_hd_string("Virtual Disk (Total Files: ", win_x + 20, win_y + 50, COLOR_TEXT, 2);
-            draw_hd_string(count_str, win_x + 280, win_y + 50, COLOR_ACCENT, 2); draw_hd_string(")", win_x + 300, win_y + 50, COLOR_TEXT, 2);
+            draw_hd_string("Virtual Disk (Total Files: ", win_x + 20, win_y + 50, COLOR_TEXT, 2); draw_hd_string(count_str, win_x + 280, win_y + 50, COLOR_ACCENT, 2); draw_hd_string(")", win_x + 300, win_y + 50, COLOR_TEXT, 2);
             for(int f = 0; f < file_count && f < 5; f++) {
                 draw_rounded_rect(win_x + 20, win_y + 90 + (f * 40), 30, 30, 5, 0x00FFB300); draw_hd_string(file_system[f].name, win_x + 60, win_y + 95 + (f * 40), COLOR_TEXT, 2);
             }
@@ -146,10 +160,7 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         }
         else if (app_state == 4) { 
             draw_hd_window(win_x, win_y, 400, 300, "HD Notepad");
-            draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 2);
-            draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 2);
-            
-            // DAY 131: SAVE AND LOAD BUTTONS
+            draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 2); draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 2);
             draw_rounded_rect(win_x + 280, win_y + 45, 45, 25, 5, 0x004CAF50); draw_hd_string("SAVE", win_x + 285, win_y + 50, 0xFFFFFF, 1);
             draw_rounded_rect(win_x + 335, win_y + 45, 45, 25, 5, 0x00FFB300); draw_hd_string("LOAD", win_x + 340, win_y + 50, 0xFFFFFF, 1);
         }
@@ -170,20 +181,40 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
             draw_hd_window(win_x, win_y, 300, 320, "HD Paint");
             if (!paint_init) { for(int i=0; i<260*200; i++) hd_paint_canvas[i] = 0xFFFFFF; paint_init = 1; }
             for(int py=0; py<200; py++) { for(int px=0; px<260; px++) { int screen_pos = ((win_y + 40 + py) * 1024) + (win_x + 20 + px); high_res_buffer[screen_pos] = hd_paint_canvas[(py * 260) + px]; } }
-            draw_rounded_rect(win_x + 20, win_y + 260, 30, 30, 5, 0x00E53935); draw_rounded_rect(win_x + 60, win_y + 260, 30, 30, 5, 0x004CAF50); draw_rounded_rect(win_x + 100, win_y + 260, 30, 30, 5, 0x002196F3); draw_rounded_rect(win_x + 140, win_y + 260, 30, 30, 5, 0x00000000); draw_rounded_rect(win_x + 180, win_y + 260, 30, 30, 5, 0xFFFFFFFF); draw_hd_string("Clr", win_x + 225, win_y + 270, 0x00E53935, 1);
+            draw_rounded_rect(win_x + 20, win_y + 260, 30, 30, 5, 0x00E53935); draw_rounded_rect(win_x + 60, win_y + 260, 30, 30, 5, 0x004CAF50); draw_rounded_rect(win_x + 100, win_y + 260, 30, 30, 5, 0x002196F3); draw_rounded_rect(win_x + 140, win_y + 260, 30, 30, 5, 0x00000000); draw_rounded_rect(win_x + 180, win_y + 260, 30, 30, 5, 0xFFFFFFFF); 
+            // NAYA: Save button for Paint
+            draw_rounded_rect(win_x + 225, win_y + 260, 45, 30, 5, 0x00FFB300); draw_hd_string("Save", win_x + 230, win_y + 270, 0x000000, 1);
         }
-        // DAY 133: THE SETTINGS APP (THEME CHANGER)
         else if (app_state == 8) {
             draw_hd_window(win_x, win_y, 300, 200, "Settings");
             draw_hd_string("Personalize Theme:", win_x+20, win_y+50, COLOR_TEXT, 2);
-            draw_rounded_rect(win_x+20, win_y+90, 50, 50, 5, 0x001E1E2E); // Dark
-            draw_rounded_rect(win_x+85, win_y+90, 50, 50, 5, 0x00F8F9FA); // Light
-            draw_rounded_rect(win_x+150, win_y+90, 50, 50, 5, 0x000F4C75); // Ocean
-            draw_rounded_rect(win_x+215, win_y+90, 50, 50, 5, 0x001B4332); // Forest
+            draw_rounded_rect(win_x+20, win_y+90, 50, 50, 5, 0x001E1E2E); draw_rounded_rect(win_x+85, win_y+90, 50, 50, 5, 0x00F8F9FA); draw_rounded_rect(win_x+150, win_y+90, 50, 50, 5, 0x000F4C75); draw_rounded_rect(win_x+215, win_y+90, 50, 50, 5, 0x001B4332); 
+        }
+        // DAY 136: THE PIANO APP
+        else if (app_state == 9) {
+            draw_hd_window(win_x, win_y, 350, 230, "Mini Piano");
+            for(int i=0; i<7; i++) draw_rounded_rect(win_x + 20 + (i*42), win_y + 50, 40, 140, 5, 0xFFFFFF); // White Keys
+            for(int i=0; i<6; i++) { // Black Keys
+                if (i == 2) continue; 
+                draw_rounded_rect(win_x + 45 + (i*42), win_y + 50, 28, 80, 3, 0x000000);
+            }
+            draw_hd_string("Click keys to play!", win_x + 70, win_y + 200, COLOR_ACCENT, 2);
+        }
+        // DAY 137: IMAGE GALLERY APP
+        else if (app_state == 10) {
+            draw_hd_window(win_x, win_y, 300, 280, "Image Gallery");
+            draw_rounded_rect(win_x + 20, win_y + 50, 260, 200, 5, 0x000000); 
+            // Paint Canvas ka data draw karna
+            for(int py=0; py<200; py++) {
+                for(int px=0; px<260; px++) {
+                    int screen_pos = ((win_y + 50 + py) * 1024) + (win_x + 20 + px);
+                    high_res_buffer[screen_pos] = hd_paint_canvas[(py * 260) + px];
+                }
+            }
         }
     }
 
-    if (start_menu) {
+  if (start_menu) {
         int sm_w = 220, sm_h = 300, sm_x = 120, sm_y = 708 - sm_h - 10;
         draw_rounded_rect(sm_x + 5, sm_y + 5, sm_w, sm_h, 10, 0x00111111);
         draw_rounded_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00252526);
@@ -194,19 +225,18 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         draw_hd_string("> Calculator", sm_x + 20, sm_y + 100, COLOR_TEXT, 2);
         draw_hd_string("> Tic-Tac-Toe", sm_x + 20, sm_y + 130, COLOR_TEXT, 2);
         draw_hd_string("> Settings", sm_x + 20, sm_y + 160, 0x002196F3, 2);
+        
+        // NAYA: HD Paint ko waapas apni jagah par add kar diya! (y + 190)
+        draw_hd_string("> HD Paint", sm_x + 20, sm_y + 190, 0x00E53935, 2);
 
         draw_rounded_rect(sm_x + 20, sm_y + 240, sm_w - 40, 40, 5, COLOR_DANGER);
         draw_hd_string("SHUT DOWN", sm_x + 55, sm_y + 252, COLOR_TEXT, 2);
     }
 
     if (ctx_open) {
-        draw_rounded_rect(ctx_x + 5, ctx_y + 5, 160, 85, 5, 0x00111111); 
-        draw_rounded_rect(ctx_x, ctx_y, 160, 85, 5, 0x002D2D30);         
-        draw_hd_string("> Refresh", ctx_x + 15, ctx_y + 15, COLOR_TEXT, 2);
-        draw_hd_string("> Terminal", ctx_x + 15, ctx_y + 50, COLOR_TEXT, 2); 
+        draw_rounded_rect(ctx_x + 5, ctx_y + 5, 160, 85, 5, 0x00111111); draw_rounded_rect(ctx_x, ctx_y, 160, 85, 5, 0x002D2D30);         
+        draw_hd_string("> Refresh", ctx_x + 15, ctx_y + 15, COLOR_TEXT, 2); draw_hd_string("> Terminal", ctx_x + 15, ctx_y + 50, COLOR_TEXT, 2); 
     }
-
-    draw_hd_mouse_pointer(mx, my);
-    swap_buffers_32();
+    draw_hd_mouse_pointer(mx, my); swap_buffers_32();
 }
 #endif
