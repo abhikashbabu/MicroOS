@@ -44,6 +44,25 @@ void draw_hd_string(char* str, int start_x, int start_y, unsigned int hex_color,
         x += (4 * scale); // Space between chars
     }
 }
+// ----------------------------------------------------
+// NAYA (DAY 105): HD MOUSE CURSOR (White with Black Border)
+// ----------------------------------------------------
+void draw_hd_mouse_pointer(int x, int y) {
+    // Agar mouse screen ke bahar ja raha hai toh ruk jao
+    if (x < 0 || x > 1000 || y < 0 || y > 750) return;
+
+    // Draw a modern scalable pointer (15 pixels tall)
+    for(int i = 0; i < 15; i++) {
+        for(int j = 0; j <= i/1.5; j++) {
+            // Black border effect (outer pixels)
+            if (j == 0 || j == (int)(i/1.5) || i == 14) {
+                put_pixel_32(x + j, y + i, 0x000000); // Black
+            } else {
+                put_pixel_32(x + j, y + i, 0xFFFFFF); // White inner fill
+            }
+        }
+    }
+}
 
 // ----------------------------------------------------
 // NAYA (DAY 104): THE NEXT-GEN TASKBAR (Like Windows 11 / Mac)
@@ -71,9 +90,8 @@ void draw_modern_taskbar() {
     // Time Widget on Right Side
     draw_hd_string("10:30 AM", tb_x + tb_width - 120, tb_y + 18, COLOR_TEXT, 2);
 }
-
-// Clear the HD screen
-void render_desktop_bg() {
+// Clear the HD screen and draw Taskbar
+void render_desktop_bg(int mx, int my) {
     // Fill background with Dark Mode Color
     for (int i = 0; i < (1024 * 768); i++) {
         high_res_buffer[i] = COLOR_DARK_BG;
@@ -81,6 +99,9 @@ void render_desktop_bg() {
     
     // Draw the new taskbar
     draw_modern_taskbar();
+    
+    // NAYA: Draw the HD mouse on top of everything!
+    draw_hd_mouse_pointer(mx, my);
     
     // Swap buffer to screen
     swap_buffers_32();
