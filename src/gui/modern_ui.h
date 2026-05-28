@@ -165,15 +165,22 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
     draw_modern_taskbar(h, m, app_state);
     
     if (app_state > 0 && !is_minimized) {
-        if (app_state == 1) { 
+      if (app_state == 1) { 
             draw_hd_window(win_x, win_y, 420, 300, "Terminal - Root");
             for(int i = 0; i < hd_term_lines; i++) { draw_hd_string(hd_term_history[i], win_x + 15, win_y + 40 + (i * 20), COLOR_TEXT, 1); }
-            int current_y = win_y + 40 + (hd_term_lines * 20); draw_hd_string("root@microos:~# ", win_x + 15, current_y, 0x004CAF50, 1); draw_hd_string(term_buffer, win_x + 155, current_y, COLOR_TEXT, 1);
+            int current_y = win_y + 40 + (hd_term_lines * 20); 
+            draw_hd_string("root@microos:~# ", win_x + 15, current_y, 0x004CAF50, 1); 
+            draw_hd_string(term_buffer, win_x + 155, current_y, COLOR_TEXT, 1);
+            
+            // DAY 158: Blinking Terminal Cursor
+            int t_len = 0; while(term_buffer[t_len]) t_len++;
+            if (uptime % 2 == 0) draw_hd_string("_", win_x + 155 + (t_len * 8), current_y, COLOR_TEXT, 1);
+
             if (ind_loading > 0) {
                 draw_rounded_rect(win_x + 50, win_y + 120, 320, 60, 5, 0x00111111); draw_hd_string("Compiling .ind to Runtime...", win_x + 70, win_y + 135, 0xFFFFFF, 1);
                 draw_rounded_rect(win_x + 70, win_y + 160, 280, 10, 5, 0x00333333); draw_rounded_rect(win_x + 70, win_y + 160, ind_loading * 2, 10, 5, 0x004CAF50);
             }
-        } 
+        }
         else if (app_state == 2) { 
             draw_hd_window(win_x, win_y, 500, 350, "File Explorer"); draw_rounded_rect(win_x, win_y+30, 500, 40, 0, 0x001E1E1E); draw_hd_string("Path: C:/MicroOS/", win_x + 20, win_y + 45, 0x0094A3B8, 1);
             char count_str[5]; hd_itoa(file_count, count_str); draw_hd_string("Items:", win_x + 400, win_y + 45, 0x0094A3B8, 1); draw_hd_string(count_str, win_x + 460, win_y + 45, COLOR_ACCENT, 1); 
@@ -185,15 +192,40 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
                 draw_hd_string(file_system[f].name, fx, fy + 45, COLOR_TEXT, 1); 
             }
         }
-        else if (app_state == 3) { 
-            draw_hd_window(win_x, win_y, 450, 320, "Task Manager"); draw_hd_string("CPU Performance (Simulated)", win_x + 20, win_y + 50, COLOR_TEXT, 1); draw_rounded_rect(win_x + 20, win_y + 70, 410, 80, 5, 0x00111111); for(int i=0; i<400; i+=10) draw_rounded_rect(win_x+25+i, win_y+140 - (i%40), 5, (i%40)+5, 2, 0x004CAF50);
-            draw_hd_string("Memory (RAM)", win_x + 20, win_y + 170, COLOR_TEXT, 1); char ram_str[15]; hd_itoa(used_ram/1024, ram_str); draw_hd_string(ram_str, win_x + 20, win_y + 190, 0x002196F3, 2); draw_hd_string(" KB In Use", win_x + 140, win_y + 195, COLOR_TEXT, 1);
-            draw_rounded_rect(win_x + 20, win_y + 230, 410, 20, 10, 0x00111111); int ram_bar = (used_ram / 500); if(ram_bar > 410) ram_bar = 410; draw_rounded_rect(win_x + 20, win_y + 230, ram_bar, 20, 10, 0x002196F3);
-            draw_hd_string("System Uptime:", win_x + 20, win_y + 270, COLOR_TEXT, 1); char up_str[10]; hd_itoa(uptime, up_str); draw_hd_string(up_str, win_x + 130, win_y + 270, COLOR_ACCENT, 1); draw_hd_string("secs", win_x + 180, win_y + 270, COLOR_TEXT, 1);
+       else if (app_state == 3) { 
+            draw_hd_window(win_x, win_y, 450, 320, "Task Manager"); 
+            draw_hd_string("Live Memory Graph", win_x + 20, win_y + 50, COLOR_TEXT, 1); 
+            draw_rounded_rect(win_x + 20, win_y + 70, 410, 80, 5, 0x00111111); 
+            
+            // DAY 157: LIVE DYNAMIC SHIFTING GRAPH
+            for(int i=0; i<400; i+=10) {
+                int noise = ((used_ram + (uptime * 15) + i) * 17) % 50; 
+                draw_rounded_rect(win_x+25+i, win_y+140 - noise, 5, noise+5, 2, 0x004CAF50);
+            }
+
+            draw_hd_string("Memory (RAM)", win_x + 20, win_y + 170, COLOR_TEXT, 1); 
+            char ram_str[15]; hd_itoa(used_ram/1024, ram_str); 
+            draw_hd_string(ram_str, win_x + 20, win_y + 190, 0x002196F3, 2); draw_hd_string(" KB In Use", win_x + 140, win_y + 195, COLOR_TEXT, 1);
+            
+            draw_rounded_rect(win_x + 20, win_y + 230, 410, 20, 10, 0x00111111); 
+            int ram_bar = (used_ram / 500); if(ram_bar > 410) ram_bar = 410; 
+            draw_rounded_rect(win_x + 20, win_y + 230, ram_bar, 20, 10, 0x002196F3);
+            
+            draw_hd_string("System Uptime:", win_x + 20, win_y + 270, COLOR_TEXT, 1); 
+            char up_str[10]; hd_itoa(uptime, up_str); 
+            draw_hd_string(up_str, win_x + 130, win_y + 270, COLOR_ACCENT, 1); draw_hd_string("secs", win_x + 180, win_y + 270, COLOR_TEXT, 1);
         }
-        else if (app_state == 4) { 
-            draw_hd_window(win_x, win_y, 400, 300, "HD Notepad"); draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 1); draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 1);
-            draw_rounded_rect(win_x + 280, win_y + 45, 45, 25, 5, 0x004CAF50); draw_hd_string("SAVE", win_x + 285, win_y + 53, 0xFFFFFF, 1); draw_rounded_rect(win_x + 335, win_y + 45, 45, 25, 5, 0x00FFB300); draw_hd_string("LOAD", win_x + 340, win_y + 53, 0xFFFFFF, 1);
+       else if (app_state == 4) { 
+            draw_hd_window(win_x, win_y, 400, 300, "HD Notepad"); 
+            draw_hd_string("Type your notes below:", win_x + 20, win_y + 50, COLOR_ACCENT, 1); 
+            draw_hd_string(term_buffer, win_x + 20, win_y + 90, COLOR_TEXT, 1);
+            
+            // DAY 158: Notepad Blinking Cursor
+            int t_len = 0; while(term_buffer[t_len]) t_len++;
+            if (uptime % 2 == 0) draw_hd_string("_", win_x + 20 + (t_len * 8), win_y + 90, COLOR_TEXT, 1);
+
+            draw_rounded_rect(win_x + 280, win_y + 45, 45, 25, 5, 0x004CAF50); draw_hd_string("SAVE", win_x + 285, win_y + 53, 0xFFFFFF, 1); 
+            draw_rounded_rect(win_x + 335, win_y + 45, 45, 25, 5, 0x00FFB300); draw_hd_string("LOAD", win_x + 340, win_y + 53, 0xFFFFFF, 1);
         }
         else if (app_state == 5) { 
             draw_hd_window(win_x, win_y, 300, 360, "Calculator"); draw_rounded_rect(win_x + 20, win_y + 45, 260, 50, 5, 0x00111111); int len = 0; while(calc_display[len]) len++; draw_hd_string(calc_display, win_x + 260 - (len * 16), win_y + 55, COLOR_TEXT, 2);
@@ -218,10 +250,26 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         else if (app_state == 10) {
             draw_hd_window(win_x, win_y, 300, 280, "Image Gallery"); draw_rounded_rect(win_x + 20, win_y + 50, 260, 200, 5, 0x000000); for(int py=0; py<200; py++) { for(int px=0; px<260; px++) { int screen_pos = ((win_y + 50 + py) * 1024) + (win_x + 20 + px); high_res_buffer[screen_pos] = hd_paint_canvas[(py * 260) + px]; } }
         }
-        else if (app_state == 11) {
-            draw_hd_window(win_x, win_y, 400, 300, ind_app_title); draw_rounded_rect(win_x+5, win_y+35, 390, 260, 5, ind_app_bg); draw_hd_string(ind_app_msg, win_x + 20, win_y + 60, 0xFFFFFF, 2);
-            if (ind_app_input[0] != '\0') { draw_rounded_rect(win_x + 20, win_y + 110, 350, 35, 5, 0x00111111); int blen = 0; while(ind_input_buf[blen]) blen++; if (blen == 0) draw_hd_string(ind_app_input, win_x + 30, win_y + 120, 0x0078909C, 1); else draw_hd_string(ind_input_buf, win_x + 30, win_y + 120, 0xFFFFFF, 1); }
-            if (ind_app_btn[0] != '\0') { draw_rounded_rect(win_x + 20, win_y + 160, 200, 40, 5, 0x004CAF50); draw_hd_string(ind_app_btn, win_x + 40, win_y + 172, 0xFFFFFF, 1); }
+       else if (app_state == 11) {
+            draw_hd_window(win_x, win_y, 400, 300, ind_app_title); 
+            draw_rounded_rect(win_x+5, win_y+35, 390, 260, 5, ind_app_bg); 
+            draw_hd_string(ind_app_msg, win_x + 20, win_y + 60, 0xFFFFFF, 2);
+            
+            if (ind_app_input[0] != '\0') { 
+                draw_rounded_rect(win_x + 20, win_y + 110, 350, 35, 5, 0x00111111); 
+                int blen = 0; while(ind_input_buf[blen]) blen++; 
+                if (blen == 0) {
+                    draw_hd_string(ind_app_input, win_x + 30, win_y + 120, 0x0078909C, 1); 
+                } else { 
+                    draw_hd_string(ind_input_buf, win_x + 30, win_y + 120, 0xFFFFFF, 1); 
+                    // DAY 158: IND App Input Blinking Cursor
+                    if (uptime % 2 == 0) draw_hd_string("|", win_x + 30 + (blen * 8), win_y + 120, 0xFFFFFF, 1);
+                } 
+            }
+            if (ind_app_btn[0] != '\0') { 
+                draw_rounded_rect(win_x + 20, win_y + 160, 200, 40, 5, 0x004CAF50); 
+                draw_hd_string(ind_app_btn, win_x + 40, win_y + 172, 0xFFFFFF, 1); 
+            }
         }
         else if (app_state == 12) {
             draw_hd_window(win_x, win_y, 350, 300, "Calendar"); draw_rounded_rect(win_x+5, win_y+35, 340, 80, 5, 0x00E53935); draw_rounded_rect(win_x+5, win_y+115, 340, 180, 5, 0x00FFFFFF); draw_hd_string("TODAY", win_x + 140, win_y + 50, 0xFFFFFF, 1); char d_str[3], m_str[3], y_str[5]; hd_itoa(rtc_day, d_str); hd_itoa(rtc_month, m_str); hd_itoa(rtc_year, y_str); draw_hd_string(d_str, win_x + 130, win_y + 130, 0x00000000, 6); draw_hd_string("Month:", win_x + 80, win_y + 220, 0x0078909C, 1); draw_hd_string(m_str, win_x + 140, win_y + 220, 0x00E53935, 1); draw_hd_string("Year:", win_x + 180, win_y + 220, 0x0078909C, 1); draw_hd_string(y_str, win_x + 230, win_y + 220, 0x00E53935, 1); draw_hd_string("Hardware RTC Synced", win_x + 90, win_y + 260, 0x00B0BEC5, 1);
