@@ -135,8 +135,20 @@ void execute_command(char* command) {
                             int i = 0; while(cmd_in[i] != '\0') { cmd_out[out_len++] = cmd_in[i++]; } cmd_out[out_len++] = '\n'; cmd_out[out_len] = '\0';
                             if (cmd_in[0] == 'l' && cmd_in[1] == 's') { if (file_count == 0) { char* msg = "NO FILES\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; } else { for(int f = 0; f < file_count; f++) { int k = 0; while(file_system[f].name[k] != '\0') cmd_out[out_len++] = file_system[f].name[k++]; cmd_out[out_len++] = ' '; } cmd_out[out_len++] = '\n'; } }
                             else if (cmd_in[0]=='c' && cmd_in[1]=='a' && cmd_in[2]=='t' && cmd_in[3]==' ') { int f_idx = find_file(&cmd_in[4]); if (f_idx != -1) { int k = 0; while(file_system[f_idx].content[k] != '\0') cmd_out[out_len++] = file_system[f_idx].content[k++]; cmd_out[out_len++] = '\n'; } else { char* msg = "NOT FOUND\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; } }
-                            else if (cmd_in[0]=='c' && cmd_in[1]=='l') { cmd_out[0] = '\0'; out_len = 0; } else { char* msg = "UNKNOWN\n"; int k=0; while(msg[k]!='\0') cmd_out[out_len++] = msg[k++]; } cmd_out[out_len] = '\0'; cmd_len = 0; cmd_in[0] = '\0'; 
-                        }
+else if (cmd_in[0] == 'c' && cmd_in[1] == 'l') { 
+        cmd_out[0] = '\0'; 
+        out_len = 0; 
+    } 
+    else { 
+        char* msg = "UNKNOWN\n"; 
+        int k = 0; 
+        while(msg[k] != '\0') {
+            cmd_out[out_len++] = msg[k++]; 
+        }
+    } 
+    cmd_out[out_len] = '\0'; 
+    cmd_len = 0; 
+    cmd_in[0] = '\0';                        }
                         else if (scancode == 0x39 && cmd_len < 40) { cmd_in[cmd_len++] = ' '; cmd_in[cmd_len] = '\0'; } else if (cmd_len < 40 && keyboard_map[scancode] != 0) { cmd_in[cmd_len++] = keyboard_map[scancode]; cmd_in[cmd_len] = '\0'; }
                     }
                 } 
