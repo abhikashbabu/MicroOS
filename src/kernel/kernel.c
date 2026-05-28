@@ -47,67 +47,92 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             __asm__ volatile ("sti"); 
             vesa_framebuffer = (unsigned int*) fb_addr;
 
-            create_file("app.ind", "T:My First IND App;M:Hello JS Runtime!;");
+            // DAY 154: PLAY CINEMATIC BOOT ANIMATION
+            play_boot_animation();
+
+            create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
 
             int hd_mouse_x = 512, hd_mouse_y = 384; 
             int app_state = -1; 
-            int win_x = 312, win_y = 200;
+            int win_x = 312, win_y = 200; 
             int is_dragging = 0, start_menu_open = 0, is_minimized = 0;
-            int ctx_open = 0, ctx_x = 0, ctx_y = 0;
+            int ctx_open = 0, ctx_x = 0, ctx_y = 0; 
             char term_buffer[50] = {0}; 
             int term_idx = 0;
             char pwd_buffer[10] = {0}; 
-            int pwd_idx = 0;
+            int pwd_idx = 0; 
             char calc_display[20] = "0"; 
             int calc_op = 0, calc_num1 = 0, calc_new_num = 1;
             int theme_idx = 0; 
             int game_board[9] = {0}; 
             int game_turn = 1, game_winner = 0;
-
-            int idle_seconds = 0, is_screensaver = 0;
+            int idle_seconds = 0, is_screensaver = 0; 
             int ss_x = 100, ss_y = 100, ss_dx = 3, ss_dy = 3; 
-            int last_rtc_s = -1;
+            int last_rtc_s = -1; 
             int system_uptime = 0; 
             unsigned int brush_color = 0x000000;
 
-            int icon_x[6] = {20, 20, 20, 20, 20, 20}; 
-            int icon_y[6] = {20, 100, 180, 260, 340, 420};
+            // DAY 155: ARRAY UPDATED TO 9 ICONS (Added About PC)
+            int icon_x[9] = {20, 20, 20, 20, 20, 100, 100, 100, 100}; 
+            int icon_y[9] = {20, 100, 180, 260, 340, 20, 100, 180, 260};
             int dragging_icon = -1, icon_moved = 0; 
             int prev_left_click = 0;
 
-            int action_center_open = 0;
-            int ind_loading = 0; 
-            int target_ind_file = -1; 
+            int action_center_open = 0, ind_loading = 0, target_ind_file = -1; 
+            char ind_input_buf[30] = ""; 
+            int ind_input_idx = 0;
 
-            int app_widths[12] = {0, 420, 400, 450, 400, 300, 300, 300, 300, 350, 300, 400};
+            // DAY 155: APP STATES ARRAY INCREASED TO 15 (Up to App 14)
+            int app_widths[15] = {0, 420, 500, 450, 400, 300, 300, 300, 300, 350, 300, 400, 350, 360, 350};
 
-            char key_map[128] = {0};
+            char notif_msg[50] = ""; 
+            int notif_timer = 0; 
+            int notif_y = -100;
+            
+            // DAY 155 FIX: Track Music State for Asynchronous UI
+            int now_playing = 0; 
+
+            char key_map[128] = {0}; 
             key_map[0x1E]='a'; key_map[0x30]='b'; key_map[0x2E]='c'; key_map[0x20]='d'; 
             key_map[0x12]='e'; key_map[0x21]='f'; key_map[0x22]='g'; key_map[0x23]='h'; 
             key_map[0x17]='i'; key_map[0x24]='j'; key_map[0x25]='k'; key_map[0x26]='l'; 
             key_map[0x32]='m'; key_map[0x31]='n'; key_map[0x18]='o'; key_map[0x19]='p'; 
             key_map[0x10]='q'; key_map[0x13]='r'; key_map[0x1F]='s'; key_map[0x14]='t'; 
             key_map[0x16]='u'; key_map[0x2F]='v'; key_map[0x11]='w'; key_map[0x2D]='x'; 
-            key_map[0x15]='y'; key_map[0x2C]='z'; key_map[0x39]=' '; 
-            key_map[0x02]='1'; key_map[0x03]='2'; key_map[0x04]='3'; key_map[0x05]='4'; 
-            key_map[0x06]='5'; key_map[0x07]='6'; key_map[0x08]='7'; key_map[0x09]='8'; 
-            key_map[0x0A]='9'; key_map[0x0B]='0';
+            key_map[0x15]='y'; key_map[0x2C]='z'; key_map[0x39]=' '; key_map[0x02]='1'; 
+            key_map[0x03]='2'; key_map[0x04]='3'; key_map[0x05]='4'; key_map[0x06]='5'; 
+            key_map[0x07]='6'; key_map[0x08]='7'; key_map[0x09]='8'; key_map[0x0A]='9'; 
+            key_map[0x0B]='0';
 
             while(1) {
                 outb(0x70, 0x04); unsigned char rtc_h = inb(0x71); 
                 outb(0x70, 0x02); unsigned char rtc_m = inb(0x71); 
                 outb(0x70, 0x00); unsigned char rtc_s = inb(0x71);
                 
+                outb(0x70, 0x07); unsigned char rtc_d = inb(0x71); 
+                outb(0x70, 0x08); unsigned char rtc_mon = inb(0x71); 
+                outb(0x70, 0x09); unsigned char rtc_y = inb(0x71);
+                
                 int h = (rtc_h & 0x0F) + ((rtc_h / 16) * 10); 
                 int m = (rtc_m & 0x0F) + ((rtc_m / 16) * 10); 
                 int s = (rtc_s & 0x0F) + ((rtc_s / 16) * 10);
+                int day = (rtc_d & 0x0F) + ((rtc_d / 16) * 10); 
+                int month = (rtc_mon & 0x0F) + ((rtc_mon / 16) * 10); 
+                int year = (rtc_y & 0x0F) + ((rtc_y / 16) * 10) + 2000;
 
                 if (s != last_rtc_s) { 
                     last_rtc_s = s; 
                     idle_seconds++; 
                     system_uptime++; 
+                    if (notif_timer > 0) notif_timer--; 
                 }
                 
+                if (notif_timer > 0 && notif_y < 20) {
+                    notif_y += 5; 
+                } else if (notif_timer <= 0 && notif_y > -100) {
+                    notif_y -= 5; 
+                }
+
                 if (idle_seconds >= 10 && app_state != -1) {
                     is_screensaver = 1; 
                 }
@@ -125,22 +150,31 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         ind_loading = 0;
                         if (target_ind_file != -1) {
                             char* content = file_system[target_ind_file].content;
-                            int i = 0, t_idx = 0, m_idx = 0, mode = 0;
+                            int i = 0, t_idx = 0, m_idx = 0, b_idx = 0, in_idx = 0, mode = 0;
+                            ind_app_btn[0] = '\0'; 
+                            ind_app_input[0] = '\0'; 
+                            ind_input_buf[0] = '\0'; 
+                            ind_input_idx = 0;
                             
                             while(content[i] != '\0') {
                                 if (content[i] == 'T' && content[i+1] == ':') { mode = 1; i+=2; continue; }
                                 if (content[i] == 'M' && content[i+1] == ':') { mode = 2; i+=2; continue; }
+                                if (content[i] == 'B' && content[i+1] == ':') { mode = 3; i+=2; continue; } 
+                                if (content[i] == 'I' && content[i+1] == ':') { mode = 4; i+=2; continue; } 
                                 if (content[i] == ';') { mode = 0; i++; continue; }
                                 
                                 if (mode == 1 && t_idx < 49) ind_app_title[t_idx++] = content[i];
                                 if (mode == 2 && m_idx < 99) ind_app_msg[m_idx++] = content[i];
+                                if (mode == 3 && b_idx < 29) ind_app_btn[b_idx++] = content[i];
+                                if (mode == 4 && in_idx < 29) ind_app_input[in_idx++] = content[i];
                                 i++;
                             }
-                            ind_app_title[t_idx] = '\0';
-                            ind_app_msg[m_idx] = '\0';
-                            ind_app_bg = 0x00E65100; 
-                            
-                            app_state = 11;
+                            ind_app_title[t_idx] = '\0'; 
+                            ind_app_msg[m_idx] = '\0'; 
+                            ind_app_btn[b_idx] = '\0'; 
+                            ind_app_input[in_idx] = '\0';
+                            ind_app_bg = 0x001E1E1E; 
+                            app_state = 11; 
                             win_x = 312; 
                             win_y = 200; 
                             is_minimized = 0;
@@ -175,10 +209,10 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                             hd_mouse_x += rel_x; 
                             hd_mouse_y -= rel_y; 
                             
-                            if (hd_mouse_x < 0) { hd_mouse_x = 0; }
-                            if (hd_mouse_x > 1000) { hd_mouse_x = 1000; }
-                            if (hd_mouse_y < 0) { hd_mouse_y = 0; }
-                            if (hd_mouse_y > 750) { hd_mouse_y = 750; }
+                            if (hd_mouse_x < 0) hd_mouse_x = 0; 
+                            if (hd_mouse_x > 1000) hd_mouse_x = 1000; 
+                            if (hd_mouse_y < 0) hd_mouse_y = 0; 
+                            if (hd_mouse_y > 750) hd_mouse_y = 750; 
 
                             if (app_state == -1) continue; 
                             
@@ -194,14 +228,14 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                 }
 
                                 if (ctx_open) {
-                                    if (hd_mouse_x >= ctx_x && hd_mouse_x <= ctx_x + 160 && hd_mouse_y >= ctx_y && hd_mouse_y <= ctx_y + 85) {
+                                    // DAY 155 FIX: ADVANCED CONTEXT MENU CLICKS
+                                    if (hd_mouse_x >= ctx_x && hd_mouse_x <= ctx_x + 180 && hd_mouse_y >= ctx_y && hd_mouse_y <= ctx_y + 120) {
                                         if (hd_mouse_y <= ctx_y + 40) { 
-                                            // Refresh logic
+                                            app_state = 14; win_x = 312; win_y = 200; is_minimized = 0; // About PC
+                                        } else if (hd_mouse_y <= ctx_y + 80) { 
+                                            app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; // Terminal
                                         } else { 
-                                            app_state = 1; 
-                                            win_x = 312; 
-                                            win_y = 200; 
-                                            is_minimized = 0; 
+                                            app_state = 8; win_x = 312; win_y = 200; is_minimized = 0; // Settings
                                         }
                                     }
                                     if (just_clicked) ctx_open = 0; 
@@ -224,16 +258,21 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         if (just_clicked) { 
                                             app_state = 0; 
                                             is_dragging = 0; 
+                                            hd_stop_sound(); // Stop playing if app is closed
                                         }
                                     }
 
                                     if (app_state == 2 && !is_minimized && !is_dragging && just_clicked) {
-                                        for(int f=0; f<file_count && f<5; f++) {
-                                            int row_y = win_y + 80 + (f * 45); 
-                                            if (hd_mouse_y >= row_y && hd_mouse_y <= row_y + 40 && hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+380) {
-                                                if (file_system[f].name[0] == 'I' && file_system[f].name[1] == 'M' && file_system[f].name[2] == 'G') {
+                                        for(int f=0; f<file_count && f<10; f++) {
+                                            int col = f % 5; 
+                                            int row = f / 5;
+                                            int fx = win_x + 30 + (col * 90); 
+                                            int fy = win_y + 90 + (row * 100);
+                                            if (hd_mouse_x >= fx && hd_mouse_x <= fx+40 && hd_mouse_y >= fy && hd_mouse_y <= fy+40) {
+                                                if (file_system[f].name[0] == 'I' && file_system[f].name[1] == 'M' && file_system[f].name[2] == 'G') { 
                                                     app_state = 10; 
-                                                } else if (file_system[f].name[0] == 'a' && file_system[f].name[1] == 'p' && file_system[f].name[2] == 'p') {
+                                                } 
+                                                else if (file_system[f].name[0] == 'a' && file_system[f].name[1] == 'p' && file_system[f].name[2] == 'p') {
                                                     target_ind_file = f; 
                                                     ind_loading = 1; 
                                                     app_state = 1; 
@@ -247,11 +286,24 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                                     term_buffer[c] = '\0'; 
                                                     term_idx = c;
                                                 }
-                                                win_x = 312; 
-                                                win_y = 200; 
-                                                is_minimized = 0; 
-                                                break;
+                                                win_x = 312; win_y = 200; is_minimized = 0; break;
                                             }
+                                        }
+                                    }
+
+                                    if (app_state == 11 && !is_minimized && !is_dragging && just_clicked) {
+                                        if (ind_app_btn[0] != '\0' && hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+220 && hd_mouse_y >= win_y+160 && hd_mouse_y <= win_y+200) {
+                                            ind_app_bg = 0x004CAF50; 
+                                            int k=0, j=0; 
+                                            char* prefix = "Welcome, ";
+                                            while(prefix[k]) { notif_msg[k]=prefix[k]; k++; }
+                                            while(ind_input_buf[j]) { notif_msg[k] = ind_input_buf[j]; k++; j++; }
+                                            if (j == 0) { 
+                                                char* nf = "Guest!"; 
+                                                while(nf[j]) { notif_msg[k]=nf[j]; k++; j++; } 
+                                            }
+                                            notif_msg[k]='\0';
+                                            notif_timer = 4; 
                                         }
                                     }
 
@@ -261,6 +313,10 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                                 delete_file("NOTE.TXT"); 
                                             }
                                             create_file("NOTE.TXT", term_buffer);
+                                            int k=0; char* sm = "Note Saved!"; 
+                                            while(sm[k]) { notif_msg[k]=sm[k]; k++; } 
+                                            notif_msg[k]='\0'; 
+                                            notif_timer = 2;
                                         }
                                         if (hd_mouse_x >= win_x+335 && hd_mouse_x <= win_x+380 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
                                             int f = find_file("NOTE.TXT"); 
@@ -291,9 +347,9 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                             int py = hd_mouse_y - (win_y+40);
                                             for(int i=-1; i<=1; i++) { 
                                                 for(int j=-1; j<=1; j++) { 
-                                                    if(py+i >= 0 && py+i < 200 && px+j >= 0 && px+j < 260) {
+                                                    if(py+i >= 0 && py+i < 200 && px+j >= 0 && px+j < 260) { 
                                                         hd_paint_canvas[(py+i)*260 + (px+j)] = brush_color; 
-                                                    }
+                                                    } 
                                                 } 
                                             }
                                         }
@@ -304,10 +360,12 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                             else if (hd_mouse_x >= win_x+140 && hd_mouse_x <= win_x+170) brush_color = 0x00000000; 
                                             else if (hd_mouse_x >= win_x+180 && hd_mouse_x <= win_x+210) brush_color = 0xFFFFFFFF; 
                                             else if (hd_mouse_x >= win_x+225 && hd_mouse_x <= win_x+270) { 
-                                                if(find_file("IMG.BMP") != -1) {
-                                                    delete_file("IMG.BMP"); 
-                                                }
+                                                if(find_file("IMG.BMP") != -1) delete_file("IMG.BMP"); 
                                                 create_file("IMG.BMP", "IMAGE DATA"); 
+                                                int k=0; char* sm = "Image Saved to Disk"; 
+                                                while(sm[k]) { notif_msg[k]=sm[k]; k++; } 
+                                                notif_msg[k]='\0'; 
+                                                notif_timer = 2;
                                             }
                                         }
                                     }
@@ -324,6 +382,30 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         }
                                     }
                                     
+                                    // DAY 155 FIX: MUSIC PLAYER UI RENDER TRICK
+                                    if (app_state == 13 && !is_minimized && !is_dragging && just_clicked) {
+                                        if (hd_mouse_y >= win_y+150 && hd_mouse_y <= win_y+190) {
+                                            if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+110) { 
+                                                now_playing = 1; 
+                                                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
+                                                int f[] = {659, 587, 370, 415, 494, 440, 277, 330, 440, 392, 247, 294, 440};
+                                                for(int i=0; i<13; i++) { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); for(volatile int d=0; d<1000000; d++); }
+                                                now_playing = 0;
+                                            }
+                                            else if (hd_mouse_x >= win_x+130 && hd_mouse_x <= win_x+220) { 
+                                                now_playing = 2; 
+                                                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
+                                                int f[] = {659, 659, 0, 659, 0, 523, 659, 0, 784};
+                                                for(int i=0; i<9; i++) { if(f[i]==0) { hd_stop_sound(); for(volatile int d=0; d<9000000; d++); } else { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); } for(volatile int d=0; d<1000000; d++); }
+                                                now_playing = 0;
+                                            }
+                                            else if (hd_mouse_x >= win_x+240 && hd_mouse_x <= win_x+330) {
+                                                hd_stop_sound();
+                                                now_playing = 0;
+                                            }
+                                        }
+                                    }
+
                                     if (app_state == 6 && !is_minimized && !is_dragging && just_clicked) {
                                         if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+280 && hd_mouse_y >= win_y+50 && hd_mouse_y <= win_y+330) {
                                             if (game_winner != 0) { 
@@ -390,7 +472,10 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                                     if(calc_display[0]=='-'){sign=-1;idx=1;} 
                                                     while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} 
                                                     calc_num1 = val * sign; 
-                                                    calc_op = (k=='+')?1:(k=='-')?2:(k=='*')?3:4; 
+                                                    if (k == '+') calc_op = 1;
+                                                    else if (k == '-') calc_op = 2;
+                                                    else if (k == '*') calc_op = 3;
+                                                    else if (k == '/') calc_op = 4;
                                                     calc_new_num = 1; 
                                                 } 
                                                 else if (k == '=') { 
@@ -403,7 +488,8 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                                     else if (calc_op == 2) res = calc_num1 - calc_num2; 
                                                     else if (calc_op == 3) res = calc_num1 * calc_num2; 
                                                     else if (calc_op == 4) { 
-                                                        if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; 
+                                                        if(calc_num2!=0) res = calc_num1 / calc_num2; 
+                                                        else res = 0; 
                                                     } 
                                                     idx = 0; 
                                                     if(res == 0) { 
@@ -442,7 +528,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         if (hd_mouse_x >= sm_x + 20 && hd_mouse_x <= sm_x + 200) {
                                             if (hd_mouse_y >= sm_y + 80 && hd_mouse_y <= sm_y + 100) { app_state = 4; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; term_buffer[0] = '\0'; term_idx = 0; }
                                             else if (hd_mouse_y >= sm_y + 115 && hd_mouse_y <= sm_y + 135) { app_state = 5; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; }
-                                            else if (hd_mouse_y >= sm_y + 150 && hd_mouse_y <= sm_y + 170) { app_state = 6; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; }
+                                            else if (hd_mouse_y >= sm_y + 150 && hd_mouse_y <= sm_y + 170) { app_state = 12; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
                                             else if (hd_mouse_y >= sm_y + 185 && hd_mouse_y <= sm_y + 205) { app_state = 8; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
                                             else if (hd_mouse_y >= sm_y + 220 && hd_mouse_y <= sm_y + 240) { app_state = 7; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
                                         }
@@ -454,13 +540,17 @@ void kernel_main(unsigned int magic, unsigned int addr) {
 
                                     if (!is_dragging && app_state == 0 && start_menu_open == 0 && !ctx_open && just_clicked) {
                                         icon_moved = 0;
-                                        for(int i=0; i<6; i++) {
-                                            if (hd_mouse_x >= icon_x[i] && hd_mouse_x <= icon_x[i]+40 && hd_mouse_y >= icon_y[i] && hd_mouse_y <= icon_y[i]+40) { dragging_icon = i; }
+                                        for(int i=0; i<9; i++) { 
+                                            if (hd_mouse_x >= icon_x[i] && hd_mouse_x <= icon_x[i]+40 && hd_mouse_y >= icon_y[i] && hd_mouse_y <= icon_y[i]+40) { 
+                                                dragging_icon = i; 
+                                            }
                                         }
                                     }
+                                    
                                     if (dragging_icon != -1) {
                                         if (rel_x != 0 || rel_y != 0) icon_moved = 1;
-                                        icon_x[dragging_icon] += rel_x; icon_y[dragging_icon] -= rel_y;
+                                        icon_x[dragging_icon] += rel_x; 
+                                        icon_y[dragging_icon] -= rel_y;
                                     }
                                 }
                             } else { 
@@ -473,14 +563,18 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         else if (dragging_icon == 3) { app_state = 6; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 4) { app_state = 8; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 5) { app_state = 9; win_x = 350; win_y = 150; is_minimized = 0; }
+                                        else if (dragging_icon == 6) { app_state = 12; win_x = 350; win_y = 150; is_minimized = 0; }
+                                        else if (dragging_icon == 7) { app_state = 13; win_x = 350; win_y = 150; is_minimized = 0; }
+                                        else if (dragging_icon == 8) { app_state = 14; win_x = 350; win_y = 150; is_minimized = 0; }
                                     }
                                     dragging_icon = -1;
                                 }
                             }
                         }
-                    } else { // --- KEYBOARD DATA ---
+                    } else { 
                         if (!(data & 0x80)) { 
-                            idle_seconds = 0; is_screensaver = 0; 
+                            idle_seconds = 0; 
+                            is_screensaver = 0; 
                             
                             if (app_state == -1) {
                                 if (data == 0x1C) { 
@@ -517,52 +611,84 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                     echo_buf[e_idx + 2] = '\0'; 
                                     hd_print(echo_buf);
                                     
-                                    if (term_buffer[0]=='r' && term_buffer[1]=='u' && term_buffer[2]=='n') {
-                                        target_ind_file = find_file("app.ind");
-                                        if (target_ind_file != -1) {
-                                            ind_loading = 1; 
-                                        } else {
-                                            hd_print("Error: app.ind not found!");
-                                        }
+                                    if (term_buffer[0]=='r' && term_buffer[1]=='u' && term_buffer[2]=='n') { 
+                                        target_ind_file = find_file("app.ind"); 
+                                        if (target_ind_file != -1) ind_loading = 1; 
+                                        else hd_print("Error: app.ind not found!"); 
                                     }
-                                    else if (term_buffer[0]=='h' && term_buffer[1]=='e' && term_buffer[2]=='l' && term_buffer[3]=='p') hd_print("Commands: help, about, clear, run [app]"); 
-                                    else if (term_buffer[0]=='c' && term_buffer[1]=='l' && term_buffer[2]=='e' && term_buffer[3]=='a' && term_buffer[4]=='r') hd_term_lines = 0; 
-                                    else if (term_buffer[0]=='a' && term_buffer[1]=='b' && term_buffer[2]=='o' && term_buffer[3]=='u' && term_buffer[4]=='t') hd_print("Micro OS JS Bridge Ready"); 
-                                    else hd_print("Command not found."); 
+                                    else if (term_buffer[0]=='h' && term_buffer[1]=='e' && term_buffer[2]=='l' && term_buffer[3]=='p') {
+                                        hd_print("Commands: help, about, clear, run [app]"); 
+                                    }
+                                    else if (term_buffer[0]=='c' && term_buffer[1]=='l' && term_buffer[2]=='e' && term_buffer[3]=='a' && term_buffer[4]=='r') {
+                                        hd_term_lines = 0; 
+                                    }
+                                    else if (term_buffer[0]=='a' && term_buffer[1]=='b' && term_buffer[2]=='o' && term_buffer[3]=='u' && term_buffer[4]=='t') {
+                                        hd_print("Micro OS JS Bridge Ready"); 
+                                    }
+                                    else {
+                                        hd_print("Command not found."); 
+                                    }
                                     
-                                    term_buffer[0] = '\0'; term_idx = 0;
-                                } else if (app_state == 4 && !is_minimized) { 
+                                    term_buffer[0] = '\0'; 
+                                    term_idx = 0;
+                                } 
+                                else if (app_state == 4 && !is_minimized) { 
                                     term_buffer[0] = '\0'; 
                                     term_idx = 0; 
                                 }
                             }
                             else if (data == 0x0E) { 
-                                if (term_idx > 0) { 
-                                    term_idx--; 
-                                    term_buffer[term_idx] = '\0'; 
-                                } 
+                                if (app_state == 1 || app_state == 4) { 
+                                    if (term_idx > 0) { 
+                                        term_idx--; 
+                                        term_buffer[term_idx] = '\0'; 
+                                    } 
+                                }
+                                else if (app_state == 11 && ind_input_idx > 0 && !is_minimized) { 
+                                    ind_input_idx--; 
+                                    ind_input_buf[ind_input_idx] = '\0'; 
+                                }
                             }
-                            else if ((app_state == 1 || app_state == 4) && term_idx < 45 && !is_minimized) { 
+                            else if (!is_minimized) { 
                                 char c = key_map[data]; 
                                 if (c != 0) { 
-                                    term_buffer[term_idx] = c; 
-                                    term_idx++; 
-                                    term_buffer[term_idx] = '\0'; 
+                                    if (app_state == 1 || app_state == 4) { 
+                                        if (term_idx < 45) { 
+                                            term_buffer[term_idx] = c; 
+                                            term_idx++; 
+                                            term_buffer[term_idx] = '\0'; 
+                                        } 
+                                    }
+                                    else if (app_state == 11 && ind_input_idx < 25) { 
+                                        ind_input_buf[ind_input_idx] = c; 
+                                        ind_input_idx++; 
+                                        ind_input_buf[ind_input_idx] = '\0'; 
+                                    }
                                 } 
                             }
                         }
                     }
+                    
+                    // Render Call - Now with now_playing for UI hack
+                    render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing); 
                 }
-                
-                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading); 
             }
         }
-    }
 
-    init_gdt(); init_paging(); init_task_manager(); init_idt(); init_pic(); init_fs(); init_mouse();
-    __asm__ volatile ("sti"); 
-    set_color(COLOR_WHITE, COLOR_BLACK); clear_screen();
-    draw_top_bar(" Micro OS v0.1 | .ind Application Runtime");
-    print_string("[OK] Fallback System Loaded\n\n"); print_string("Micro OS CLI Ready. Type 'help' to start.\n\n");
-    keyboard_read_loop();
+        init_gdt(); 
+        init_paging(); 
+        init_task_manager(); 
+        init_idt(); 
+        init_pic(); 
+        init_fs(); 
+        init_mouse();
+        __asm__ volatile ("sti"); 
+        
+        set_color(COLOR_WHITE, COLOR_BLACK); 
+        clear_screen();
+        draw_top_bar(" Micro OS v0.1 | .ind Application Runtime");
+        print_string("[OK] Fallback System Loaded\n\n"); 
+        print_string("Micro OS CLI Ready. Type 'help' to start.\n\n");
+        keyboard_read_loop();
+    }
 }
