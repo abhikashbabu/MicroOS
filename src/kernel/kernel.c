@@ -47,7 +47,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             __asm__ volatile ("sti"); 
             vesa_framebuffer = (unsigned int*) fb_addr;
 
-            // DAY 154: PLAY CINEMATIC BOOT ANIMATION
+            // DAY 154: PLAY CINEMATIC BOOT ANIMATION HERE!
             play_boot_animation();
 
             create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
@@ -72,9 +72,9 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             int system_uptime = 0; 
             unsigned int brush_color = 0x000000;
 
-            // DAY 155: ARRAY UPDATED TO 9 ICONS (Added About PC)
-            int icon_x[9] = {20, 20, 20, 20, 20, 100, 100, 100, 100}; 
-            int icon_y[9] = {20, 100, 180, 260, 340, 20, 100, 180, 260};
+            // DAY 160: ARRAY UPDATED TO 10 ICONS
+            int icon_x[10] = {20, 20, 20, 20, 20, 100, 100, 100, 100, 100}; 
+            int icon_y[10] = {20, 100, 180, 260, 340, 20, 100, 180, 260, 340};
             int dragging_icon = -1, icon_moved = 0; 
             int prev_left_click = 0;
 
@@ -82,15 +82,13 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             char ind_input_buf[30] = ""; 
             int ind_input_idx = 0;
 
-            // DAY 155: APP STATES ARRAY INCREASED TO 15 (Up to App 14)
-            int app_widths[15] = {0, 420, 500, 450, 400, 300, 300, 300, 300, 350, 300, 400, 350, 360, 350};
+            // DAY 160: ARRAY UPDATED TO 16 APP STATES (Added Store App)
+            int app_widths[16] = {0, 420, 500, 450, 400, 300, 300, 300, 300, 350, 300, 400, 350, 360, 350, 470};
 
             char notif_msg[50] = ""; 
             int notif_timer = 0; 
             int notif_y = -100;
-            
-            // DAY 155 FIX: Track Music State for Asynchronous UI
-            int now_playing = 0; 
+            int now_playing = 0;
 
             char key_map[128] = {0}; 
             key_map[0x1E]='a'; key_map[0x30]='b'; key_map[0x2E]='c'; key_map[0x20]='d'; 
@@ -173,7 +171,6 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                             ind_app_msg[m_idx] = '\0'; 
                             ind_app_btn[b_idx] = '\0'; 
                             ind_app_input[in_idx] = '\0';
-                            ind_app_bg = 0x001E1E1E; 
                             app_state = 11; 
                             win_x = 312; 
                             win_y = 200; 
@@ -187,6 +184,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                 
                 if (k_status & 1) { 
                     unsigned char data = inb(0x60); 
+                    
                     if (k_status & 0x20) { 
                         unsigned char m1 = data;
                         if (m1 & 0x08) {
@@ -223,335 +221,239 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                             }
 
                             if (left_click && !is_screensaver) {
+                                // Action Center Click
                                 if (just_clicked && hd_mouse_x >= 800 && hd_mouse_x <= 1000 && hd_mouse_y >= 10 && hd_mouse_y <= 40) { 
                                     action_center_open = !action_center_open; 
+                                    just_clicked = 0;
                                 }
 
-                                if (ctx_open) {
-                                    // DAY 155 FIX: ADVANCED CONTEXT MENU CLICKS
+                                // Context Menu Click
+                                if (ctx_open && just_clicked) {
                                     if (hd_mouse_x >= ctx_x && hd_mouse_x <= ctx_x + 180 && hd_mouse_y >= ctx_y && hd_mouse_y <= ctx_y + 120) {
-                                        if (hd_mouse_y <= ctx_y + 40) { 
-                                            app_state = 14; win_x = 312; win_y = 200; is_minimized = 0; // About PC
-                                        } else if (hd_mouse_y <= ctx_y + 80) { 
-                                            app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; // Terminal
-                                        } else { 
-                                            app_state = 8; win_x = 312; win_y = 200; is_minimized = 0; // Settings
-                                        }
+                                        if (hd_mouse_y <= ctx_y + 40) { app_state = 14; win_x = 312; win_y = 200; is_minimized = 0; } 
+                                        else if (hd_mouse_y <= ctx_y + 80) { app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; } 
+                                        else { app_state = 8; win_x = 312; win_y = 200; is_minimized = 0; } 
                                     }
-                                    if (just_clicked) ctx_open = 0; 
+                                    ctx_open = 0; 
+                                    just_clicked = 0; 
                                 }
-                                else { 
-                                    int w = app_widths[app_state]; 
-                                    if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x && hd_mouse_x <= win_x + (w - 35) && hd_mouse_y >= win_y && hd_mouse_y <= win_y + 30) {
-                                        is_dragging = 1; 
-                                        start_menu_open = 0; 
-                                        action_center_open = 0; 
-                                        dragging_icon = -1;
+                                
+                                // Window Dragging and Close
+                                int w = app_widths[app_state]; 
+                                if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x && hd_mouse_x <= win_x + (w - 35) && hd_mouse_y >= win_y && hd_mouse_y <= win_y + 30) {
+                                    is_dragging = 1; 
+                                    start_menu_open = 0; 
+                                    action_center_open = 0; 
+                                    dragging_icon = -1;
+                                }
+                                
+                                if (is_dragging) { 
+                                    win_x += rel_x; 
+                                    win_y -= rel_y; 
+                                }
+                                
+                                if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x + w - 30 && hd_mouse_x <= win_x + w - 15 && hd_mouse_y >= win_y + 8 && hd_mouse_y <= win_y + 23) {
+                                    if (just_clicked) { 
+                                        app_state = 0; 
+                                        is_dragging = 0; 
+                                        hd_stop_sound(); 
+                                        now_playing = 0; 
+                                        just_clicked = 0; 
                                     }
-                                    
-                                    if (is_dragging) { 
-                                        win_x += rel_x; 
-                                        win_y -= rel_y; 
-                                    }
-                                    
-                                    if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x + w - 30 && hd_mouse_x <= win_x + w - 15 && hd_mouse_y >= win_y + 8 && hd_mouse_y <= win_y + 23) {
-                                        if (just_clicked) { 
-                                            app_state = 0; 
-                                            is_dragging = 0; 
-                                            hd_stop_sound(); // Stop playing if app is closed
-                                        }
-                                    }
+                                }
 
-                                    if (app_state == 2 && !is_minimized && !is_dragging && just_clicked) {
-                                        for(int f=0; f<file_count && f<10; f++) {
-                                            int col = f % 5; 
-                                            int row = f / 5;
-                                            int fx = win_x + 30 + (col * 90); 
-                                            int fy = win_y + 90 + (row * 100);
-                                            if (hd_mouse_x >= fx && hd_mouse_x <= fx+40 && hd_mouse_y >= fy && hd_mouse_y <= fy+40) {
-                                                if (file_system[f].name[0] == 'I' && file_system[f].name[1] == 'M' && file_system[f].name[2] == 'G') { 
-                                                    app_state = 10; 
-                                                } 
-                                                else if (file_system[f].name[0] == 'a' && file_system[f].name[1] == 'p' && file_system[f].name[2] == 'p') {
-                                                    target_ind_file = f; 
-                                                    ind_loading = 1; 
-                                                    app_state = 1; 
-                                                } else {
-                                                    app_state = 4; 
-                                                    int c = 0; 
-                                                    while(file_system[f].content[c] != '\0' && c < 45) { 
-                                                        term_buffer[c] = file_system[f].content[c]; 
-                                                        c++; 
-                                                    } 
-                                                    term_buffer[c] = '\0'; 
-                                                    term_idx = c;
-                                                }
-                                                win_x = 312; win_y = 200; is_minimized = 0; break;
-                                            }
+                                // Store App Clicks
+                                if (app_state == 15 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_y >= win_y+240 && hd_mouse_y <= win_y+270) {
+                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+140) {
+                                            int k=0; char* sm = "Mango Pickle added to Cart!"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 3; just_clicked = 0;
+                                        }
+                                        else if (hd_mouse_x >= win_x+170 && hd_mouse_x <= win_x+290) {
+                                            int k=0; char* sm = "Lemon Pickle added to Cart!"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 3; just_clicked = 0;
+                                        }
+                                        else if (hd_mouse_x >= win_x+320 && hd_mouse_x <= win_x+440) {
+                                            int k=0; char* sm = "Garlic Pickle added to Cart!"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 3; just_clicked = 0;
                                         }
                                     }
+                                }
 
-                                    if (app_state == 11 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (ind_app_btn[0] != '\0' && hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+220 && hd_mouse_y >= win_y+160 && hd_mouse_y <= win_y+200) {
-                                            ind_app_bg = 0x004CAF50; 
-                                            int k=0, j=0; 
-                                            char* prefix = "Welcome, ";
-                                            while(prefix[k]) { notif_msg[k]=prefix[k]; k++; }
-                                            while(ind_input_buf[j]) { notif_msg[k] = ind_input_buf[j]; k++; j++; }
-                                            if (j == 0) { 
-                                                char* nf = "Guest!"; 
-                                                while(nf[j]) { notif_msg[k]=nf[j]; k++; j++; } 
-                                            }
-                                            notif_msg[k]='\0';
-                                            notif_timer = 4; 
-                                        }
-                                    }
-
-                                    if (app_state == 4 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_x >= win_x+280 && hd_mouse_x <= win_x+325 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
-                                            if (find_file("NOTE.TXT") != -1) {
-                                                delete_file("NOTE.TXT"); 
-                                            }
-                                            create_file("NOTE.TXT", term_buffer);
-                                            int k=0; char* sm = "Note Saved!"; 
-                                            while(sm[k]) { notif_msg[k]=sm[k]; k++; } 
-                                            notif_msg[k]='\0'; 
-                                            notif_timer = 2;
-                                        }
-                                        if (hd_mouse_x >= win_x+335 && hd_mouse_x <= win_x+380 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
-                                            int f = find_file("NOTE.TXT"); 
-                                            if (f != -1) { 
-                                                int c=0; 
-                                                while(file_system[f].content[c] != '\0' && c<45) { 
-                                                    term_buffer[c] = file_system[f].content[c]; 
-                                                    c++; 
-                                                } 
-                                                term_buffer[c] = '\0'; 
-                                                term_idx = c; 
-                                            }
-                                        }
-                                    }
-
-                                    if (app_state == 8 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_y >= win_y+90 && hd_mouse_y <= win_y+140) {
-                                            if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+70) theme_idx = 0; 
-                                            else if (hd_mouse_x >= win_x+85 && hd_mouse_x <= win_x+135) theme_idx = 1; 
-                                            else if (hd_mouse_x >= win_x+150 && hd_mouse_x <= win_x+200) theme_idx = 2; 
-                                            else if (hd_mouse_x >= win_x+215 && hd_mouse_x <= win_x+265) theme_idx = 3;
-                                        }
-                                    }
-
-                                    if (app_state == 7 && !is_minimized && !is_dragging) {
-                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x < win_x+280 && hd_mouse_y >= win_y+40 && hd_mouse_y < win_y+240) {
-                                            int px = hd_mouse_x - (win_x+20); 
-                                            int py = hd_mouse_y - (win_y+40);
-                                            for(int i=-1; i<=1; i++) { 
-                                                for(int j=-1; j<=1; j++) { 
-                                                    if(py+i >= 0 && py+i < 200 && px+j >= 0 && px+j < 260) { 
-                                                        hd_paint_canvas[(py+i)*260 + (px+j)] = brush_color; 
-                                                    } 
-                                                } 
-                                            }
-                                        }
-                                        if (just_clicked && hd_mouse_y >= win_y+260 && hd_mouse_y <= win_y+290) {
-                                            if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+50) brush_color = 0x00E53935; 
-                                            else if (hd_mouse_x >= win_x+60 && hd_mouse_x <= win_x+90) brush_color = 0x004CAF50; 
-                                            else if (hd_mouse_x >= win_x+100 && hd_mouse_x <= win_x+130) brush_color = 0x002196F3; 
-                                            else if (hd_mouse_x >= win_x+140 && hd_mouse_x <= win_x+170) brush_color = 0x00000000; 
-                                            else if (hd_mouse_x >= win_x+180 && hd_mouse_x <= win_x+210) brush_color = 0xFFFFFFFF; 
-                                            else if (hd_mouse_x >= win_x+225 && hd_mouse_x <= win_x+270) { 
-                                                if(find_file("IMG.BMP") != -1) delete_file("IMG.BMP"); 
-                                                create_file("IMG.BMP", "IMAGE DATA"); 
-                                                int k=0; char* sm = "Image Saved to Disk"; 
-                                                while(sm[k]) { notif_msg[k]=sm[k]; k++; } 
-                                                notif_msg[k]='\0'; 
-                                                notif_timer = 2;
-                                            }
-                                        }
-                                    }
-
-                                    if (app_state == 9 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_y >= win_y + 50 && hd_mouse_y <= win_y + 190) {
-                                            int key_idx = (hd_mouse_x - (win_x + 20)) / 42;
-                                            if (key_idx >= 0 && key_idx < 7) { 
-                                                int freqs[7] = {261, 293, 329, 349, 392, 440, 493}; 
-                                                hd_play_sound(freqs[key_idx]); 
-                                                for(volatile int d=0; d<8000000; d++); 
-                                                hd_stop_sound(); 
-                                            }
-                                        }
-                                    }
-                                    
-                                    // DAY 155 FIX: MUSIC PLAYER UI RENDER TRICK
-                                    if (app_state == 13 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_y >= win_y+150 && hd_mouse_y <= win_y+190) {
-                                            if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+110) { 
-                                                now_playing = 1; 
-                                                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
-                                                int f[] = {659, 587, 370, 415, 494, 440, 277, 330, 440, 392, 247, 294, 440};
-                                                for(int i=0; i<13; i++) { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); for(volatile int d=0; d<1000000; d++); }
-                                                now_playing = 0;
-                                            }
-                                            else if (hd_mouse_x >= win_x+130 && hd_mouse_x <= win_x+220) { 
-                                                now_playing = 2; 
-                                                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
-                                                int f[] = {659, 659, 0, 659, 0, 523, 659, 0, 784};
-                                                for(int i=0; i<9; i++) { if(f[i]==0) { hd_stop_sound(); for(volatile int d=0; d<9000000; d++); } else { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); } for(volatile int d=0; d<1000000; d++); }
-                                                now_playing = 0;
-                                            }
-                                            else if (hd_mouse_x >= win_x+240 && hd_mouse_x <= win_x+330) {
-                                                hd_stop_sound();
-                                                now_playing = 0;
-                                            }
-                                        }
-                                    }
-
-                                    if (app_state == 6 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+280 && hd_mouse_y >= win_y+50 && hd_mouse_y <= win_y+330) {
-                                            if (game_winner != 0) { 
-                                                for(int i=0; i<9; i++) game_board[i]=0; 
-                                                game_winner=0; 
-                                                game_turn=1; 
+                                // File Explorer
+                                if (app_state == 2 && !is_minimized && !is_dragging && just_clicked) {
+                                    for(int f=0; f<file_count && f<10; f++) {
+                                        int col = f % 5; int row = f / 5; int fx = win_x + 30 + (col * 90); int fy = win_y + 90 + (row * 100);
+                                        if (hd_mouse_x >= fx && hd_mouse_x <= fx+40 && hd_mouse_y >= fy && hd_mouse_y <= fy+40) {
+                                            if (file_system[f].name[0] == 'I' && file_system[f].name[1] == 'M' && file_system[f].name[2] == 'G') { app_state = 10; } 
+                                            else if (file_system[f].name[0] == 'a' && file_system[f].name[1] == 'p' && file_system[f].name[2] == 'p') {
+                                                target_ind_file = f; ind_loading = 1; app_state = 1; 
                                             } else {
-                                                int col = (hd_mouse_x - (win_x + 20)) / 90; 
-                                                int row = (hd_mouse_y - (win_y + 50)) / 95;
-                                                if (col >= 0 && col < 3 && row >= 0 && row < 3) { 
-                                                    int cell = (row * 3) + col; 
-                                                    if (game_board[cell] == 0) { 
-                                                        game_board[cell] = game_turn; 
-                                                        int w[8][3] = {{0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6}}; 
-                                                        for(int i=0; i<8; i++) {
-                                                            if(game_board[w[i][0]] != 0 && game_board[w[i][0]] == game_board[w[i][1]] && game_board[w[i][1]] == game_board[w[i][2]]) {
-                                                                game_winner = game_board[w[i][0]]; 
-                                                            }
-                                                        }
-                                                        if (game_winner == 0) { 
-                                                            int full = 1; 
-                                                            for(int i=0;i<9;i++) {
-                                                                if(game_board[i]==0) full=0; 
-                                                            }
-                                                            if (full) game_winner = 3; 
-                                                        } 
-                                                        game_turn = (game_turn == 1) ? 2 : 1; 
-                                                    } 
-                                                }
+                                                app_state = 4; int c = 0; while(file_system[f].content[c] != '\0' && c < 45) { term_buffer[c] = file_system[f].content[c]; c++; } term_buffer[c] = '\0'; term_idx = c;
+                                            }
+                                            win_x = 312; win_y = 200; is_minimized = 0; just_clicked = 0; break;
+                                        }
+                                    }
+                                }
+
+                                // Interactive App Form
+                                if (app_state == 11 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (ind_app_btn[0] != '\0' && hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+220 && hd_mouse_y >= win_y+160 && hd_mouse_y <= win_y+200) {
+                                        int k=0, j=0; char* prefix = "Welcome, ";
+                                        while(prefix[k]) { notif_msg[k]=prefix[k]; k++; }
+                                        while(ind_input_buf[j]) { notif_msg[k] = ind_input_buf[j]; k++; j++; }
+                                        if (j == 0) { char* nf = "Guest!"; while(nf[j]) { notif_msg[k]=nf[j]; k++; j++; } }
+                                        notif_msg[k]='\0'; notif_timer = 4; just_clicked = 0;
+                                    }
+                                }
+
+                                // Notepad
+                                if (app_state == 4 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_x >= win_x+280 && hd_mouse_x <= win_x+325 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
+                                        if (find_file("NOTE.TXT") != -1) { delete_file("NOTE.TXT"); } create_file("NOTE.TXT", term_buffer);
+                                        int k=0; char* sm = "Note Saved!"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 2; just_clicked = 0;
+                                    }
+                                    if (hd_mouse_x >= win_x+335 && hd_mouse_x <= win_x+380 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
+                                        int f = find_file("NOTE.TXT"); 
+                                        if (f != -1) { int c=0; while(file_system[f].content[c] != '\0' && c<45) { term_buffer[c] = file_system[f].content[c]; c++; } term_buffer[c] = '\0'; term_idx = c; just_clicked = 0; }
+                                    }
+                                }
+
+                                // Settings Theme
+                                if (app_state == 8 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_y >= win_y+90 && hd_mouse_y <= win_y+140) {
+                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+70) theme_idx = 0; else if (hd_mouse_x >= win_x+85 && hd_mouse_x <= win_x+135) theme_idx = 1; else if (hd_mouse_x >= win_x+150 && hd_mouse_x <= win_x+200) theme_idx = 2; else if (hd_mouse_x >= win_x+215 && hd_mouse_x <= win_x+265) theme_idx = 3;
+                                        just_clicked = 0;
+                                    }
+                                }
+
+                                // HD Paint
+                                if (app_state == 7 && !is_minimized && !is_dragging) {
+                                    if (hd_mouse_x >= win_x+20 && hd_mouse_x < win_x+280 && hd_mouse_y >= win_y+40 && hd_mouse_y < win_y+240) {
+                                        int px = hd_mouse_x - (win_x+20); int py = hd_mouse_y - (win_y+40);
+                                        for(int i=-1; i<=1; i++) { for(int j=-1; j<=1; j++) { if(py+i >= 0 && py+i < 200 && px+j >= 0 && px+j < 260) { hd_paint_canvas[(py+i)*260 + (px+j)] = brush_color; } } }
+                                    }
+                                    if (just_clicked && hd_mouse_y >= win_y+260 && hd_mouse_y <= win_y+290) {
+                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+50) brush_color = 0x00E53935; else if (hd_mouse_x >= win_x+60 && hd_mouse_x <= win_x+90) brush_color = 0x004CAF50; else if (hd_mouse_x >= win_x+100 && hd_mouse_x <= win_x+130) brush_color = 0x002196F3; else if (hd_mouse_x >= win_x+140 && hd_mouse_x <= win_x+170) brush_color = 0x00000000; else if (hd_mouse_x >= win_x+180 && hd_mouse_x <= win_x+210) brush_color = 0xFFFFFFFF; 
+                                        else if (hd_mouse_x >= win_x+225 && hd_mouse_x <= win_x+270) { 
+                                            if(find_file("IMG.BMP") != -1) delete_file("IMG.BMP"); create_file("IMG.BMP", "IMAGE DATA"); 
+                                            int k=0; char* sm = "Image Saved to Disk"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 2;
+                                        }
+                                        just_clicked = 0;
+                                    }
+                                }
+
+                                // Piano
+                                if (app_state == 9 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_y >= win_y + 50 && hd_mouse_y <= win_y + 190) {
+                                        int key_idx = (hd_mouse_x - (win_x + 20)) / 42;
+                                        if (key_idx >= 0 && key_idx < 7) { 
+                                            int freqs[7] = {261, 293, 329, 349, 392, 440, 493}; 
+                                            hd_play_sound(freqs[key_idx]); 
+                                            for(volatile int d=0; d<8000000; d++); 
+                                            hd_stop_sound(); 
+                                        }
+                                    }
+                                }
+
+                                // Music Player
+                                if (app_state == 13 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_y >= win_y+150 && hd_mouse_y <= win_y+190) {
+                                        if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+110) { 
+                                            now_playing = 1; render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
+                                            int f[] = {659, 587, 370, 415, 494, 440, 277, 330, 440, 392, 247, 294, 440};
+                                            for(int i=0; i<13; i++) { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); for(volatile int d=0; d<1000000; d++); }
+                                            now_playing = 0; just_clicked = 0;
+                                        }
+                                        else if (hd_mouse_x >= win_x+130 && hd_mouse_x <= win_x+220) { 
+                                            now_playing = 2; render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing);
+                                            int f[] = {659, 659, 0, 659, 0, 523, 659, 0, 784};
+                                            for(int i=0; i<9; i++) { if(f[i]==0) { hd_stop_sound(); for(volatile int d=0; d<9000000; d++); } else { hd_play_sound(f[i]); for(volatile int d=0; d<9000000; d++); hd_stop_sound(); } for(volatile int d=0; d<1000000; d++); }
+                                            now_playing = 0; just_clicked = 0;
+                                        }
+                                        else if (hd_mouse_x >= win_x+240 && hd_mouse_x <= win_x+330) { hd_stop_sound(); now_playing = 0; just_clicked = 0; }
+                                    }
+                                }
+                                
+                                // Tic-Tac-Toe
+                                if (app_state == 6 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+280 && hd_mouse_y >= win_y+50 && hd_mouse_y <= win_y+330) {
+                                        if (game_winner != 0) { for(int i=0; i<9; i++) game_board[i]=0; game_winner=0; game_turn=1; just_clicked = 0; } else {
+                                            int col = (hd_mouse_x - (win_x + 20)) / 90; int row = (hd_mouse_y - (win_y + 50)) / 95;
+                                            if (col >= 0 && col < 3 && row >= 0 && row < 3) { 
+                                                int cell = (row * 3) + col; 
+                                                if (game_board[cell] == 0) { 
+                                                    game_board[cell] = game_turn; 
+                                                    int w[8][3] = {{0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6}}; 
+                                                    for(int i=0; i<8; i++) { if(game_board[w[i][0]] != 0 && game_board[w[i][0]] == game_board[w[i][1]] && game_board[w[i][1]] == game_board[w[i][2]]) game_winner = game_board[w[i][0]]; }
+                                                    if (game_winner == 0) { int full = 1; for(int i=0;i<9;i++) { if(game_board[i]==0) full=0; } if (full) game_winner = 3; } 
+                                                    game_turn = (game_turn == 1) ? 2 : 1; just_clicked = 0; 
+                                                } 
                                             }
                                         }
                                     }
+                                }
 
-                                    if (app_state == 5 && !is_minimized && !is_dragging && just_clicked) {
-                                        if (hd_mouse_x >= win_x + 20 && hd_mouse_x <= win_x + 280 && hd_mouse_y >= win_y + 105 && hd_mouse_y <= win_y + 345) {
-                                            int col = (hd_mouse_x - (win_x + 20)) / 65; 
-                                            int row = (hd_mouse_y - (win_y + 105)) / 60;
-                                            if (col >= 0 && col < 4 && row >= 0 && row < 4) {
-                                                char keys[16] = {'7','8','9','/','4','5','6','*','1','2','3','-','C','0','=','+'}; 
-                                                char k = keys[(row * 4) + col];
-                                                if (k >= '0' && k <= '9') { 
-                                                    if (calc_new_num) { 
-                                                        calc_display[0] = k; 
-                                                        calc_display[1] = '\0'; 
-                                                        calc_new_num = 0; 
-                                                    } else { 
-                                                        int dlen = 0; 
-                                                        while(calc_display[dlen]) dlen++; 
-                                                        if (dlen < 10) { 
-                                                            calc_display[dlen] = k; 
-                                                            calc_display[dlen+1] = '\0'; 
-                                                        } 
-                                                    } 
-                                                } 
-                                                else if (k == 'C') { 
-                                                    calc_display[0] = '0'; 
-                                                    calc_display[1] = '\0'; 
-                                                    calc_num1 = 0; 
-                                                    calc_op = 0; 
-                                                    calc_new_num = 1; 
-                                                } 
-                                                else if (k == '+' || k == '-' || k == '*' || k == '/') { 
-                                                    int val=0, sign=1, idx=0; 
-                                                    if(calc_display[0]=='-'){sign=-1;idx=1;} 
-                                                    while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} 
-                                                    calc_num1 = val * sign; 
-                                                    if (k == '+') calc_op = 1;
-                                                    else if (k == '-') calc_op = 2;
-                                                    else if (k == '*') calc_op = 3;
-                                                    else if (k == '/') calc_op = 4;
-                                                    calc_new_num = 1; 
-                                                } 
-                                                else if (k == '=') { 
-                                                    int val=0, sign=1, idx=0; 
-                                                    if(calc_display[0]=='-'){sign=-1;idx=1;} 
-                                                    while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} 
-                                                    int calc_num2 = val * sign; 
-                                                    int res = 0; 
-                                                    if (calc_op == 1) res = calc_num1 + calc_num2; 
-                                                    else if (calc_op == 2) res = calc_num1 - calc_num2; 
-                                                    else if (calc_op == 3) res = calc_num1 * calc_num2; 
-                                                    else if (calc_op == 4) { 
-                                                        if(calc_num2!=0) res = calc_num1 / calc_num2; 
-                                                        else res = 0; 
-                                                    } 
-                                                    idx = 0; 
-                                                    if(res == 0) { 
-                                                        calc_display[0]='0'; 
-                                                        calc_display[1]='\0'; 
-                                                    } else { 
-                                                        int is_neg=0; 
-                                                        if(res<0){is_neg=1; res=-res;} 
-                                                        char tmp[20]; 
-                                                        int t=0; 
-                                                        while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; } 
-                                                        if(is_neg) tmp[t++]='-'; 
-                                                        while(t>0){ calc_display[idx++] = tmp[--t]; } 
-                                                        calc_display[idx]='\0'; 
-                                                    } 
-                                                    calc_new_num = 1; 
-                                                    calc_op = 0; 
-                                                }
-                                            }
+                                // Calculator
+                                if (app_state == 5 && !is_minimized && !is_dragging && just_clicked) {
+                                    if (hd_mouse_x >= win_x + 20 && hd_mouse_x <= win_x + 280 && hd_mouse_y >= win_y + 105 && hd_mouse_y <= win_y + 345) {
+                                        int col = (hd_mouse_x - (win_x + 20)) / 65; int row = (hd_mouse_y - (win_y + 105)) / 60;
+                                        if (col >= 0 && col < 4 && row >= 0 && row < 4) {
+                                            char keys[16] = {'7','8','9','/','4','5','6','*','1','2','3','-','C','0','=','+'}; char k = keys[(row * 4) + col];
+                                            if (k >= '0' && k <= '9') { if (calc_new_num) { calc_display[0] = k; calc_display[1] = '\0'; calc_new_num = 0; } else { int dlen = 0; while(calc_display[dlen]) dlen++; if (dlen < 10) { calc_display[dlen] = k; calc_display[dlen+1] = '\0'; } } } 
+                                            else if (k == 'C') { calc_display[0] = '0'; calc_display[1] = '\0'; calc_num1 = 0; calc_op = 0; calc_new_num = 1; } 
+                                            else if (k == '+' || k == '-' || k == '*' || k == '/') { int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} calc_num1 = val * sign; if (k == '+') calc_op = 1; else if (k == '-') calc_op = 2; else if (k == '*') calc_op = 3; else if (k == '/') calc_op = 4; calc_new_num = 1; } 
+                                            else if (k == '=') { int val=0, sign=1, idx=0; if(calc_display[0]=='-'){sign=-1;idx=1;} while(calc_display[idx]){val=val*10+(calc_display[idx]-'0');idx++;} int calc_num2 = val * sign; int res = 0; if (calc_op == 1) res = calc_num1 + calc_num2; else if (calc_op == 2) res = calc_num1 - calc_num2; else if (calc_op == 3) res = calc_num1 * calc_num2; else if (calc_op == 4) { if(calc_num2!=0) res = calc_num1 / calc_num2; else res = 0; } idx = 0; if(res == 0) { calc_display[0]='0'; calc_display[1]='\0'; } else { int is_neg=0; if(res<0){is_neg=1; res=-res;} char tmp[20]; int t=0; while(res>0){ tmp[t++]=(res%10)+'0'; res/=10; } if(is_neg) tmp[t++]='-'; while(t>0){ calc_display[idx++] = tmp[--t]; } calc_display[idx]='\0'; } calc_new_num = 1; calc_op = 0; }
+                                            just_clicked = 0;
                                         }
                                     }
+                                }
 
-                                    int tb_width = 420, tb_x = (1024 - tb_width) / 2, tb_y = 768 - 50 - 15;
-                                    if (!is_dragging && hd_mouse_y >= tb_y && hd_mouse_y <= tb_y + 50 && just_clicked) {
-                                        if (hd_mouse_x >= tb_x+20 && hd_mouse_x <= tb_x+50) { start_menu_open = !start_menu_open; }
-                                        else if (hd_mouse_x >= tb_x+70 && hd_mouse_x <= tb_x+100) { if (app_state == 2) is_minimized = !is_minimized; else { app_state = 2; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; }
-                                        else if (hd_mouse_x >= tb_x+120 && hd_mouse_x <= tb_x+150) { if (app_state == 3) is_minimized = !is_minimized; else { app_state = 3; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; }
-                                        else if (hd_mouse_x >= tb_x+170 && hd_mouse_x <= tb_x+200) { if (app_state == 1) is_minimized = !is_minimized; else { app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; term_buffer[0] = '\0'; term_idx = 0; }
-                                        else if (hd_mouse_x >= tb_x+220 && hd_mouse_x <= tb_x+250) { if (app_state == 5) is_minimized = !is_minimized; else { app_state = 5; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; }
-                                        else if (hd_mouse_x >= tb_x+270 && hd_mouse_x <= tb_x+300) { if (app_state == 6) is_minimized = !is_minimized; else { app_state = 6; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; }
-                                        else if (hd_mouse_x >= tb_x+320 && hd_mouse_x <= tb_x+350) { if (app_state == 8) is_minimized = !is_minimized; else { app_state = 8; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; }
+                                // Taskbar 
+                                int tb_width = 420, tb_x = (1024 - tb_width) / 2, tb_y = 768 - 50 - 15;
+                                if (!is_dragging && hd_mouse_y >= tb_y && hd_mouse_y <= tb_y + 50 && just_clicked) {
+                                    if (hd_mouse_x >= tb_x+20 && hd_mouse_x <= tb_x+50) { start_menu_open = !start_menu_open; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+70 && hd_mouse_x <= tb_x+100) { if (app_state == 2) is_minimized = !is_minimized; else { app_state = 2; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+120 && hd_mouse_x <= tb_x+150) { if (app_state == 3) is_minimized = !is_minimized; else { app_state = 3; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+170 && hd_mouse_x <= tb_x+200) { if (app_state == 1) is_minimized = !is_minimized; else { app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; term_buffer[0] = '\0'; term_idx = 0; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+220 && hd_mouse_x <= tb_x+250) { if (app_state == 5) is_minimized = !is_minimized; else { app_state = 5; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+270 && hd_mouse_x <= tb_x+300) { if (app_state == 6) is_minimized = !is_minimized; else { app_state = 6; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                                    else if (hd_mouse_x >= tb_x+320 && hd_mouse_x <= tb_x+350) { if (app_state == 8) is_minimized = !is_minimized; else { app_state = 8; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                                }
+                                
+                                // Start Menu inner clicks
+                                if (start_menu_open && just_clicked) {
+                                    int sm_x = 312, sm_y = 378; 
+                                    if (hd_mouse_x >= sm_x + 20 && hd_mouse_x <= sm_x + 200) {
+                                        if (hd_mouse_y >= sm_y + 80 && hd_mouse_y <= sm_y + 100) { app_state = 4; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; term_buffer[0] = '\0'; term_idx = 0; just_clicked = 0; }
+                                        else if (hd_mouse_y >= sm_y + 115 && hd_mouse_y <= sm_y + 135) { app_state = 5; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; just_clicked = 0; }
+                                        else if (hd_mouse_y >= sm_y + 150 && hd_mouse_y <= sm_y + 170) { app_state = 12; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; just_clicked = 0; } 
+                                        else if (hd_mouse_y >= sm_y + 185 && hd_mouse_y <= sm_y + 205) { app_state = 8; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; just_clicked = 0; } 
+                                        else if (hd_mouse_y >= sm_y + 220 && hd_mouse_y <= sm_y + 240) { app_state = 7; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; just_clicked = 0; } 
                                     }
-                                    
-                                    if (start_menu_open && just_clicked) {
-                                        int sm_x = 312, sm_y = 378; 
-                                        if (hd_mouse_x >= sm_x + 20 && hd_mouse_x <= sm_x + 200) {
-                                            if (hd_mouse_y >= sm_y + 80 && hd_mouse_y <= sm_y + 100) { app_state = 4; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; term_buffer[0] = '\0'; term_idx = 0; }
-                                            else if (hd_mouse_y >= sm_y + 115 && hd_mouse_y <= sm_y + 135) { app_state = 5; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; }
-                                            else if (hd_mouse_y >= sm_y + 150 && hd_mouse_y <= sm_y + 170) { app_state = 12; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
-                                            else if (hd_mouse_y >= sm_y + 185 && hd_mouse_y <= sm_y + 205) { app_state = 8; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
-                                            else if (hd_mouse_y >= sm_y + 220 && hd_mouse_y <= sm_y + 240) { app_state = 7; win_x = 312; win_y = 200; start_menu_open = 0; is_minimized = 0; } 
-                                        }
-                                        if (hd_mouse_x >= sm_x + 20 && hd_mouse_x <= sm_x + 200 && hd_mouse_y >= sm_y + 265 && hd_mouse_y <= sm_y + 300) {
-                                            __asm__ volatile ("outw %0, %1" : : "a"((unsigned short)0x2000), "Nd"((unsigned short)0x604)); 
-                                            __asm__ volatile ("outw %0, %1" : : "a"((unsigned short)0x2000), "Nd"((unsigned short)0xB004));
-                                        }
+                                    if (hd_mouse_x >= sm_x + 20 && hd_mouse_x <= sm_x + 200 && hd_mouse_y >= sm_y + 265 && hd_mouse_y <= sm_y + 300) {
+                                        __asm__ volatile ("outw %0, %1" : : "a"((unsigned short)0x2000), "Nd"((unsigned short)0x604)); 
+                                        __asm__ volatile ("outw %0, %1" : : "a"((unsigned short)0x2000), "Nd"((unsigned short)0xB004));
                                     }
+                                }
 
-                                    if (!is_dragging && app_state == 0 && start_menu_open == 0 && !ctx_open && just_clicked) {
+                                // Click-Away Dismissal 
+                                if (!is_dragging && just_clicked) {
+                                    if (start_menu_open || action_center_open || ctx_open) {
+                                        start_menu_open = 0; action_center_open = 0; ctx_open = 0; 
+                                        just_clicked = 0; 
+                                    } 
+                                    else if (app_state == 0) { 
                                         icon_moved = 0;
-                                        for(int i=0; i<9; i++) { 
+                                        for(int i=0; i<10; i++) { 
                                             if (hd_mouse_x >= icon_x[i] && hd_mouse_x <= icon_x[i]+40 && hd_mouse_y >= icon_y[i] && hd_mouse_y <= icon_y[i]+40) { 
                                                 dragging_icon = i; 
                                             }
                                         }
                                     }
-                                    
-                                    if (dragging_icon != -1) {
-                                        if (rel_x != 0 || rel_y != 0) icon_moved = 1;
-                                        icon_x[dragging_icon] += rel_x; 
-                                        icon_y[dragging_icon] -= rel_y;
-                                    }
+                                }
+                                
+                                if (dragging_icon != -1) {
+                                    if (rel_x != 0 || rel_y != 0) icon_moved = 1;
+                                    icon_x[dragging_icon] += rel_x; 
+                                    icon_y[dragging_icon] -= rel_y;
                                 }
                             } else { 
                                 is_dragging = 0; 
@@ -566,6 +468,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         else if (dragging_icon == 6) { app_state = 12; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 7) { app_state = 13; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 8) { app_state = 14; win_x = 350; win_y = 150; is_minimized = 0; }
+                                        else if (dragging_icon == 9) { app_state = 15; win_x = 280; win_y = 150; is_minimized = 0; } 
                                     }
                                     dragging_icon = -1;
                                 }
@@ -669,7 +572,6 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         }
                     }
                     
-                    // Render Call - Now with now_playing for UI hack
                     render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing); 
                 }
             }

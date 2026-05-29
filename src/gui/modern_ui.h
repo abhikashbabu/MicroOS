@@ -57,6 +57,12 @@ void draw_app_icon(int x, int y, int type) {
         draw_rounded_rect(x+18, y+8, 4, 4, 2, 0xFFFFFF); // i Dot
         draw_rounded_rect(x+18, y+16, 4, 16, 1, 0xFFFFFF); // i Line
     }
+    else if (type == 12) { // Store / Cart Icon
+        draw_rounded_rect(x, y, 40, 40, 8, 0x00FF5722); 
+        draw_rounded_rect(x+10, y+15, 20, 15, 2, 0xFFFFFF); 
+        draw_rounded_rect(x+15, y+10, 10, 5, 2, 0xFFFFFF); 
+        draw_rounded_rect(x+15, y+12, 10, 5, 2, 0x00FF5722); 
+    }
 }
 
 void draw_gradient_wallpaper(int theme_idx) {
@@ -161,10 +167,33 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
     draw_app_icon(icon_x[6], icon_y[6], 9); draw_hd_string("Date", icon_x[6]+4, icon_y[6]+45, 0xFFFFFF, 1); 
     draw_app_icon(icon_x[7], icon_y[7], 10); draw_hd_string("Music", icon_x[7], icon_y[7]+45, 0xFFFFFF, 1);
     draw_app_icon(icon_x[8], icon_y[8], 11); draw_hd_string("About", icon_x[8], icon_y[8]+45, 0xFFFFFF, 1); // 9th Icon
+    draw_app_icon(icon_x[9], icon_y[9], 12); draw_hd_string("Store", icon_x[9], icon_y[9]+45, 0xFFFFFF, 1);
+    if (app_state == 0) {
+        int wid_x = 780, wid_y = 100;
+        draw_rounded_rect(wid_x + 5, wid_y + 5, 200, 140, 10, 0x00111111); // Drop Shadow
+        draw_rounded_rect(wid_x, wid_y, 200, 140, 10, 0x001E293B); // Widget Background
+        draw_hd_string("Battery", wid_x + 15, wid_y + 15, 0xFFFFFF, 1);
+        
+        // Battery Icon & Fill
+        draw_rounded_rect(wid_x + 15, wid_y + 40, 60, 30, 3, 0xFFFFFF); // Outer shell
+        draw_rounded_rect(wid_x + 75, wid_y + 48, 5, 14, 2, 0xFFFFFF);  // Terminal (Nipple)
+        draw_rounded_rect(wid_x + 18, wid_y + 43, 46, 24, 2, 0x004CAF50); // Green Fill (82%)
+        draw_hd_string("82%", wid_x + 90, wid_y + 48, 0xFFFFFF, 2);
+        
+        // Text Info (Time Left)
+        draw_hd_string("Time Left", wid_x + 15, wid_y + 85, 0x0094A3B8, 1);
+        draw_hd_string("3h 45m", wid_x + 15, wid_y + 105, 0xFFFFFF, 1);
+        
+        // Power Saver Toggle UI
+        draw_hd_string("Power Saver", wid_x + 100, wid_y + 85, 0x0094A3B8, 1);
+        draw_rounded_rect(wid_x + 120, wid_y + 105, 30, 15, 7, 0x00333333); // Toggle Background
+        draw_rounded_rect(wid_x + 122, wid_y + 107, 11, 11, 5, 0xFFFFFF); // Toggle Switch (Off state)
+    }
 
     draw_modern_taskbar(h, m, app_state);
     
     if (app_state > 0 && !is_minimized) {
+      
       if (app_state == 1) { 
             draw_hd_window(win_x, win_y, 420, 300, "Terminal - Root");
             for(int i = 0; i < hd_term_lines; i++) { draw_hd_string(hd_term_history[i], win_x + 15, win_y + 40 + (i * 20), COLOR_TEXT, 1); }
@@ -295,6 +324,31 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
             draw_hd_string("Graphics: VESA HD UI Engine", win_x + 20, win_y + 180, 0x0094A3B8, 1);
             draw_hd_string("Kernel: Monolithic Custom", win_x + 20, win_y + 210, 0x0094A3B8, 1);
         }
+        // DAY 160: E-COMMERCE NATIVE APP
+        else if (app_state == 15) {
+            draw_hd_window(win_x, win_y, 470, 320, "Ghar Se Market - Store");
+            draw_rounded_rect(win_x+5, win_y+35, 460, 60, 5, 0x004CAF50); 
+            draw_hd_string("Aacharindia Premium Store", win_x + 90, win_y + 55, 0xFFFFFF, 2);
+            
+            // Product 1
+            draw_rounded_rect(win_x+20, win_y+110, 120, 120, 5, 0x00111111);
+            draw_hd_string("Mango", win_x + 50, win_y + 150, 0x00FFB300, 1);
+            draw_rounded_rect(win_x+20, win_y+240, 120, 30, 5, 0x00E53935);
+            draw_hd_string("BUY", win_x + 60, win_y + 250, 0xFFFFFF, 1);
+
+            // Product 2
+            draw_rounded_rect(win_x+170, win_y+110, 120, 120, 5, 0x00111111);
+            draw_hd_string("Lemon", win_x + 200, win_y + 150, 0x004CAF50, 1);
+            draw_rounded_rect(win_x+170, win_y+240, 120, 30, 5, 0x00E53935);
+            draw_hd_string("BUY", win_x + 210, win_y + 250, 0xFFFFFF, 1);
+            
+            // Product 3
+            draw_rounded_rect(win_x+320, win_y+110, 120, 120, 5, 0x00111111);
+            draw_hd_string("Garlic", win_x + 350, win_y + 150, 0xFFFFFF, 1);
+            draw_rounded_rect(win_x+320, win_y+240, 120, 30, 5, 0x00E53935);
+            draw_hd_string("BUY", win_x + 360, win_y + 250, 0xFFFFFF, 1);
+        }
+        
     }
 
     if (start_menu) {
