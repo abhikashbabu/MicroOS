@@ -1,6 +1,6 @@
 #ifndef MODERN_UI_H
 #define MODERN_UI_H
-
+#include "../drivers/gpu_core.h" // NAYA: Hardware GPU Driver
 #include "vesa.h"
 
    const unsigned char modern_font[91][8] = {
@@ -18,6 +18,10 @@ unsigned int ind_app_bg = 0x002D2D30;
 extern int z_bg_app;
 extern int z_bg_x;
 extern int z_bg_y;
+extern int battery_percentage; 
+extern int sys_brightness;
+extern int sys_volume;
+extern int power_saver;
 
 void draw_scaled_char(char c, int x, int y, unsigned int hex_color, int scale) {
     if (c < 32 || c > 122) return; 
@@ -214,9 +218,11 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         draw_hd_string("Time Left", wid_x + 15, wid_y + 85, 0x0094A3B8, 1);
         draw_hd_string("3h 45m", wid_x + 15, wid_y + 105, 0xFFFFFF, 1);
         
-        draw_hd_string("Power Saver", wid_x + 100, wid_y + 85, 0x0094A3B8, 1);
-        draw_rounded_rect(wid_x + 120, wid_y + 105, 30, 15, 7, 0x00333333); 
-        draw_rounded_rect(wid_x + 122, wid_y + 107, 11, 11, 5, 0xFFFFFF); // Toggle off
+     draw_hd_string("Power Saver", wid_x + 100, wid_y + 85, 0x0094A3B8, 1);
+        // NAYA: Agar power_saver = 1 hai, toh background Green hoga, nahi toh Grey.
+        draw_rounded_rect(wid_x + 120, wid_y + 105, 30, 15, 7, power_saver ? 0x004CAF50 : 0x00333333); 
+        // NAYA: Switch ki position on/off ke hisaab se shift hogi!
+        draw_rounded_rect(wid_x + (power_saver ? 135 : 122), wid_y + 107, 11, 11, 5, 0xFFFFFF);
     }
     
     if (app_state > 0 && !is_minimized) { 
@@ -430,14 +436,24 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
         draw_rounded_rect(sm_x + 20, sm_y + 265, sm_w - 40, 35, 5, COLOR_DANGER); draw_hd_string("O", sm_x + 60, sm_y + 276, 0xFFFFFF, 1); draw_hd_string("|", sm_x + 63, sm_y + 272, 0xFFFFFF, 1); draw_hd_string("SHUT DOWN", sm_x + 85, sm_y + 276, 0xFFFFFF, 1);
     }
 
-    if (action_center_open) {
+   if (action_center_open) {
         int ac_w = 250, ac_h = 400, ac_x = 760, ac_y = 50; 
         draw_rounded_rect(ac_x + 5, ac_y + 5, ac_w, ac_h, 15, 0x00111111); draw_rounded_rect(ac_x, ac_y, ac_w, ac_h, 15, 0x002D2D30); draw_hd_string("Control Center", ac_x + 20, ac_y + 20, 0xFFFFFF, 1);
+        
         draw_rounded_rect(ac_x + 20, ac_y + 60, 210, 80, 10, 0x001E1E1E); draw_rounded_rect(ac_x + 30, ac_y + 70, 40, 40, 20, 0x004CAF50); draw_hd_string("W", ac_x + 45, ac_y + 85, 0xFFFFFF, 1); draw_hd_string("Wi-Fi", ac_x + 80, ac_y + 85, 0xFFFFFF, 1);
-        draw_rounded_rect(ac_x + 20, ac_y + 160, 210, 80, 10, 0x001E1E1E); draw_hd_string("Volume", ac_x + 30, ac_y + 175, 0xFFFFFF, 1); draw_rounded_rect(ac_x + 30, ac_y + 200, 180, 10, 5, 0x00333333); draw_rounded_rect(ac_x + 30, ac_y + 200, 120, 10, 5, 0x002196F3); draw_rounded_rect(ac_x + 145, ac_y + 195, 10, 20, 5, 0xFFFFFF);
-        draw_rounded_rect(ac_x + 20, ac_y + 260, 210, 80, 10, 0x001E1E1E); draw_hd_string("Brightness", ac_x + 30, ac_y + 275, 0xFFFFFF, 1); draw_rounded_rect(ac_x + 30, ac_y + 300, 180, 10, 5, 0x00333333); draw_rounded_rect(ac_x + 30, ac_y + 300, 150, 10, 5, 0x00FFB300); draw_rounded_rect(ac_x + 175, ac_y + 295, 10, 20, 5, 0xFFFFFF);
+        
+        // Dynamic Volume Slider
+        draw_rounded_rect(ac_x + 20, ac_y + 160, 210, 80, 10, 0x001E1E1E); draw_hd_string("Volume", ac_x + 30, ac_y + 175, 0xFFFFFF, 1); 
+        draw_rounded_rect(ac_x + 30, ac_y + 200, 180, 10, 5, 0x00333333); 
+        draw_rounded_rect(ac_x + 30, ac_y + 200, sys_volume, 10, 5, 0x002196F3); // Blue fill controlled by memory
+        draw_rounded_rect(ac_x + 30 + sys_volume - 5, ac_y + 195, 10, 20, 5, 0xFFFFFF); // Handle
+        
+        // Dynamic Brightness Slider
+        draw_rounded_rect(ac_x + 20, ac_y + 260, 210, 80, 10, 0x001E1E1E); draw_hd_string("Brightness", ac_x + 30, ac_y + 275, 0xFFFFFF, 1); 
+        draw_rounded_rect(ac_x + 30, ac_y + 300, 180, 10, 5, 0x00333333); 
+        draw_rounded_rect(ac_x + 30, ac_y + 300, sys_brightness, 10, 5, 0x00FFB300); // Orange fill controlled by memory
+        draw_rounded_rect(ac_x + 30 + sys_brightness - 5, ac_y + 295, 10, 20, 5, 0xFFFFFF); // Handle
     }
-
     if (ctx_open) {
         draw_rounded_rect(ctx_x + 5, ctx_y + 5, 180, 120, 5, 0x00111111); draw_rounded_rect(ctx_x, ctx_y, 180, 120, 5, 0x002D2D30);         
         draw_hd_string("> About PC", ctx_x + 15, ctx_y + 15, COLOR_TEXT, 1); 
@@ -447,7 +463,9 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
 
     draw_notification(notif_y, notif_msg);
     draw_hd_mouse_pointer(mx, my); 
-    swap_buffers_32(); // Yeh kabhi block nahi hona chahiye!
+    apply_hardware_brightness(high_res_buffer, sys_brightness, 1024, 768);
+
+    swap_buffers_32();
 }
 
 #endif

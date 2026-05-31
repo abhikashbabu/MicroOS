@@ -9,29 +9,25 @@
 #define PIC2_COMMAND 0xA0
 #define PIC2_DATA    0xA1
 extern void context_switch_handler();
-void init_pic() {
-    // 1. PIC chips ko "Initialize" command bhejna
-    outb(PIC1_COMMAND, 0x11);
-    outb(PIC2_COMMAND, 0x11);
+// ==========================================
+// src/kernel/pic.h - UPDATE
+// ==========================================
 
-    // 2. Remapping: IRQ 0-7 ko INT 32-39 par shift karna (CPU exceptions se bachne ke liye)
-    outb(PIC1_DATA, 0x20);
-    outb(PIC2_DATA, 0x28);
-
-    // 3. Master aur Slave chip ko aapas mein jodna
-    outb(PIC1_DATA, 0x04);
-    outb(PIC2_DATA, 0x02);
-
-    // 4. x86 Mode set karna
-    outb(PIC1_DATA, 0x01);
-    outb(PIC2_DATA, 0x01);
-
-  
-
-    // 5. MASKING (Update)
-    // 0xFE ka matlab hai: Sirf bit 0 (Timer) ko allow karo, baaki sab mask rakho.
-    outb(PIC1_DATA, 0xFE); 
-    outb(PIC2_DATA, 0xFF);
+void pic_init() {
+    // ICW1: Init
+    outb(0x20, 0x11); outb(0xA0, 0x11);
+    // ICW2: Vector Offset (Master starts at 32, Slave at 40)
+    outb(0x21, 0x20); outb(0xA1, 0x28);
+    // ICW3: Cascading
+    outb(0x21, 0x04); outb(0xA1, 0x02);
+    // ICW4: 8086 mode
+    outb(0x21, 0x01); outb(0xA1, 0x01);
+    
+    // NAYA CODE YAHAN HAI:
+    // Masking: 0xF8 = 11111000 (Allows IRQ0 Timer, IRQ1 Keyboard, IRQ2 Cascade)
+    outb(0x21, 0xF8); 
+    // Masking: 0xEF = 11101111 (Allows IRQ12 PS/2 Mouse)
+    outb(0xA1, 0xEF); 
 }
 
 #endif
