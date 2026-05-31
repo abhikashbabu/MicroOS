@@ -4,7 +4,9 @@
 #include "../drivers/display.h"
 #include "../kernel/io.h"
 #include "../runtime/string.h"
+
 extern void context_switch_handler();
+
 // OS ke dusre files se variables aur functions lana (extern ka jaadu)
 extern unsigned char current_color;
 extern int cursor_x;
@@ -13,9 +15,9 @@ void update_cursor(int x, int y);
 
 unsigned int timer_ticks = 0;
 
-// NAYA: GCC ko advanced math registers use karne se rokne ke liye target attribute add kiya
-__attribute__((interrupt, target("general-regs-only"))) void timer_handler(void* frame) {
-    (void)frame; // NAYA: Compiler ki warning chup karane ke liye
+// FIX: Yahan se __attribute__ aur (void* frame) hata diya gaya hai!
+// Kyunki ab isr.asm (Assembly Wrapper) isko safe tarike se call karega.
+void timer_handler() {
     timer_ticks++;
     
     // PIT by default ~18.2 Hz par chalta hai. (18 ticks = approx 1 second)
