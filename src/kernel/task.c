@@ -1,49 +1,80 @@
-#include "../kernel/task.h"
+#include "task.h"
+#include "../drivers/display.h"
 
-task_t task_list[10];
-int current_task_count = 0;
+#define MAX_TASKS 10
+
+Task task_queue[MAX_TASKS];
+Task* current_process = 0;
+int task_count = 0;
 
 void init_task_manager() {
-    task_list[0].id = 0;
-    char kname[] = "MicroOS Kernel";
-    for(int i=0; i<15; i++) task_list[0].name[i] = kname[i];
-    task_list[0].memory_used = 1024;
-    task_list[0].is_active = 1;
+    task_count = 0;
     
-    task_list[1].id = 1;
-    char sname[] = "CLI Shell";
-    for(int i=0; i<10; i++) task_list[1].name[i] = sname[i];
-    task_list[1].memory_used = 512;
-    task_list[1].is_active = 1;
-
-    current_task_count = 2;
+    current_process = &task_queue[0]; 
+    current_process->id = 0; // process_id -> id
+    current_process->state = 1; 
+    current_process->is_active = 1;
+    current_process->next_task = current_process; 
+}
+// NAYA FUNCTION: OS ke background threads chalane ke liye
+int create_os_task(void (*entry_point)(), int pid) {
+    if (task_count >= MAX_TASKS - 1) return -1; 
+    task_count++;
+    
+    Task* new_task = &task_queue[task_count];
+    new_task->id = pid; 
+    new_task->state = 0; // READY
+    new_task->is_active = 1;
+    new_task->memory_used = 10; // dummy size
+    
+    new_task->regs.eip = (unsigned int)entry_point; // Function ka address set kiya
+    new_task->regs.eflags = 0x202; 
+    
+    new_task->next_task = current_process->next_task;
+    current_process->next_task = new_task;
+    
+    return new_task->id; 
 }
 
-// NAYA: Ab yeh function humein nayi PID wapas dega
-int create_task(char* name, unsigned int mem) {
-    if(current_task_count >= 10) return -1; // Limit reached
+int create_task(char* name, int size) {
+    if (task_count >= MAX_TASKS - 1) return -1; 
+    task_count++;
     
-    int id = current_task_count;
-    task_list[id].id = id;
+    Task* new_task = &task_queue[task_count];
+    new_task->id = task_count; // process_id -> id
+    new_task->state = 0; 
+    new_task->is_active = 1;
+    new_task->memory_used = size; // size -> memory_used
     
     int i = 0;
     while(name[i] != '\0' && i < 31) {
-        task_list[id].name[i] = name[i];
+        new_task->name[i] = name[i];
         i++;
     }
-    task_list[id].name[i] = '\0';
+    new_task->name[i] = '\0';
     
-    task_list[id].memory_used = mem;
-    task_list[id].is_active = 1; // Task ON
-    current_task_count++;
+    new_task->regs.eip = 0;
+    new_task->regs.eflags = 0x202; 
     
-    return id; // PID return ki
+    new_task->next_task = current_process->next_task;
+    current_process->next_task = new_task;
+    
+    return new_task->id; // process_id -> id
 }
 
-// NAYA: Task ko memory se free karna
-void end_task(int id) {
-    if(id >= 0 && id < 10) {
-        task_list[id].is_active = 0; // Task OFF
-        task_list[id].memory_used = 0;
+void end_task(int pid) {
+    for (int i = 0; i <= task_count; i++) {
+        if (task_queue[i].id == pid) { // process_id -> id
+            task_queue[i].is_active = 0;
+            task_queue[i].state = 2; // BLOCKED
+        }
     }
+}
+
+void context_switch_handler() {
+    if (task_count == 0) return; 
+    
+    current_process->state = 0; 
+    current_process = current_process->next_task;
+    current_process->state = 1; 
 }

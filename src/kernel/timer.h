@@ -4,7 +4,7 @@
 #include "../drivers/display.h"
 #include "../kernel/io.h"
 #include "../runtime/string.h"
-
+extern void context_switch_handler();
 // OS ke dusre files se variables aur functions lana (extern ka jaadu)
 extern unsigned char current_color;
 extern int cursor_x;
@@ -44,6 +44,7 @@ __attribute__((interrupt, target("general-regs-only"))) void timer_handler(void*
     
     // Hardware ko signal bhejo ki "Mera kaam ho gaya" (EOI - End of Interrupt)
     outb(0x20, 0x20);
+    context_switch_handler();
 }
 
 #endif

@@ -8,7 +8,7 @@
 #define PIC1_DATA    0x21
 #define PIC2_COMMAND 0xA0
 #define PIC2_DATA    0xA1
-
+extern void context_switch_handler();
 void init_pic() {
     // 1. PIC chips ko "Initialize" command bhejna
     outb(PIC1_COMMAND, 0x11);

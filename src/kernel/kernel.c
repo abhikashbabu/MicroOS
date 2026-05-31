@@ -11,7 +11,21 @@
 #include "../kernel/task.h"   
 #include "../kernel/multiboot.h" 
 #include "../gui/modern_ui.h" 
+#include "../kernel/acpi.h"
 
+
+// DAY 162: Z-Index Memory
+int z_bg_app = 0;
+int z_bg_x = 340;
+int z_bg_y = 230;
+
+// NAYA LOGIC: Ek baar mein sirf ek App (No Blinking, Max Performance!)
+void open_window(int new_app, int* fg_app, int* fg_x, int* fg_y) {
+    *fg_app = new_app;    // Naya app set karo
+    *fg_x = 312;          // Center X position
+    *fg_y = 200;          // Center Y position
+    z_bg_app = 0;         // Purane app ko completely memory se hata do!
+}
 void hd_play_sound(unsigned int nFrequence) {
     unsigned int Div; 
     unsigned char tmp; 
@@ -29,6 +43,13 @@ void hd_stop_sound() {
     unsigned char tmp = inb(0x61) & 0xFC; 
     outb(0x61, tmp); 
 }
+void background_test_task() {
+    while(1) {
+        // Yeh task background mein infinite chalega.
+        // Future mein hum yahan background music ya network ping dalenge.
+        __asm__ volatile ("nop"); // CPU ko batata hai "No Operation", taki crash na ho
+    }
+}
 
 void kernel_main(unsigned int magic, unsigned int addr) {
     if (magic == 0x2BADB002) { 
@@ -40,10 +61,12 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             map_vesa_memory(fb_addr);
             
             init_task_manager(); 
+           create_os_task(background_test_task, 999); // 999 humara background dummy PID hai
             init_idt(); 
             init_pic(); 
             init_fs(); 
             init_mouse();
+            init_acpi(); // NAYA: Hardware scan for Power Management
             __asm__ volatile ("sti"); 
             vesa_framebuffer = (unsigned int*) fb_addr;
 
@@ -72,9 +95,9 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             int system_uptime = 0; 
             unsigned int brush_color = 0x000000;
 
-            // DAY 160: ARRAY UPDATED TO 10 ICONS
-            int icon_x[10] = {20, 20, 20, 20, 20, 100, 100, 100, 100, 100}; 
-            int icon_y[10] = {20, 100, 180, 260, 340, 20, 100, 180, 260, 340};
+          // DAY 164: ARRAY UPDATED TO 12 ICONS
+            int icon_x[12] = {20, 20, 20, 20, 20, 100, 100, 100, 100, 100, 180, 180}; 
+            int icon_y[12] = {20, 100, 180, 260, 340, 20, 100, 180, 260, 340, 20, 100};
             int dragging_icon = -1, icon_moved = 0; 
             int prev_left_click = 0;
 
@@ -82,9 +105,8 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             char ind_input_buf[30] = ""; 
             int ind_input_idx = 0;
 
-            // DAY 160: ARRAY UPDATED TO 16 APP STATES (Added Store App)
-            int app_widths[16] = {0, 420, 500, 450, 400, 300, 300, 300, 300, 350, 300, 400, 350, 360, 350, 470};
-
+            // DAY 164: APP WIDTHS ARRAY UPDATED TO 18 APP STATES
+            int app_widths[18] = {0, 420, 500, 450, 400, 300, 300, 300, 300, 350, 300, 400, 350, 360, 350, 470, 400, 500};
             char notif_msg[50] = ""; 
             int notif_timer = 0; 
             int notif_y = -100;
@@ -97,10 +119,18 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             key_map[0x32]='m'; key_map[0x31]='n'; key_map[0x18]='o'; key_map[0x19]='p'; 
             key_map[0x10]='q'; key_map[0x13]='r'; key_map[0x1F]='s'; key_map[0x14]='t'; 
             key_map[0x16]='u'; key_map[0x2F]='v'; key_map[0x11]='w'; key_map[0x2D]='x'; 
-            key_map[0x15]='y'; key_map[0x2C]='z'; key_map[0x39]=' '; key_map[0x02]='1'; 
-            key_map[0x03]='2'; key_map[0x04]='3'; key_map[0x05]='4'; key_map[0x06]='5'; 
-            key_map[0x07]='6'; key_map[0x08]='7'; key_map[0x09]='8'; key_map[0x0A]='9'; 
-            key_map[0x0B]='0';
+            key_map[0x15]='y'; key_map[0x2C]='z'; key_map[0x39]=' '; 
+            
+            // Standard Number Row
+            key_map[0x02]='1'; key_map[0x03]='2'; key_map[0x04]='3'; key_map[0x05]='4'; 
+            key_map[0x06]='5'; key_map[0x07]='6'; key_map[0x08]='7'; key_map[0x09]='8'; 
+            key_map[0x0A]='9'; key_map[0x0B]='0';
+
+            // NAYA UPDATE: NumPad Keys (Ab NumPad se bhi password type hoga!)
+            key_map[0x4F]='1'; key_map[0x50]='2'; key_map[0x51]='3'; 
+            key_map[0x4B]='4'; key_map[0x4C]='5'; key_map[0x4D]='6'; 
+            key_map[0x47]='7'; key_map[0x48]='8'; key_map[0x49]='9'; 
+            key_map[0x52]='0';
 
             while(1) {
                 outb(0x70, 0x04); unsigned char rtc_h = inb(0x71); 
@@ -122,6 +152,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                     last_rtc_s = s; 
                     idle_seconds++; 
                     system_uptime++; 
+                    process_power_drain(system_uptime); // NAYA: Har second battery update hogi
                     if (notif_timer > 0) notif_timer--; 
                 }
                 
@@ -238,29 +269,36 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                     just_clicked = 0; 
                                 }
                                 
-                                // Window Dragging and Close
-                                int w = app_widths[app_state]; 
-                                if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x && hd_mouse_x <= win_x + (w - 35) && hd_mouse_y >= win_y && hd_mouse_y <= win_y + 30) {
-                                    is_dragging = 1; 
-                                    start_menu_open = 0; 
-                                    action_center_open = 0; 
-                                    dragging_icon = -1;
-                                }
-                                
-                                if (is_dragging) { 
-                                    win_x += rel_x; 
-                                    win_y -= rel_y; 
-                                }
-                                
-                                if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x + w - 30 && hd_mouse_x <= win_x + w - 15 && hd_mouse_y >= win_y + 8 && hd_mouse_y <= win_y + 23) {
-                                    if (just_clicked) { 
-                                        app_state = 0; 
-                                        is_dragging = 0; 
-                                        hd_stop_sound(); 
-                                        now_playing = 0; 
-                                        just_clicked = 0; 
+                               int w = app_widths[app_state]; 
+                                    int bg_w = app_widths[z_bg_app];
+
+                                    // 1. Z-INDEX: Click Background Window to Bring it Forward!
+                                    if (z_bg_app > 0 && just_clicked) {
+                                        if (hd_mouse_x >= z_bg_x && hd_mouse_x <= z_bg_x + bg_w && hd_mouse_y >= z_bg_y && hd_mouse_y <= z_bg_y + 350) {
+                                            // Make sure we didn't click the overlapping foreground window
+                                            int clicked_fg = (app_state > 0 && hd_mouse_x >= win_x && hd_mouse_x <= win_x + w && hd_mouse_y >= win_y && hd_mouse_y <= win_y + 350);
+                                            if (!clicked_fg) { 
+                                                open_window(z_bg_app, &app_state, &win_x, &win_y); // SWAP!
+                                                just_clicked = 0;
+                                            }
+                                        }
                                     }
-                                }
+
+                                    // 2. Window Dragging (Foreground Window Only)
+                                    if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x && hd_mouse_x <= win_x + (w - 35) && hd_mouse_y >= win_y && hd_mouse_y <= win_y + 30) {
+                                        is_dragging = 1; 
+                                        start_menu_open = 0; action_center_open = 0; dragging_icon = -1;
+                                    }
+                                    if (is_dragging) { win_x += rel_x; win_y -= rel_y; }
+                                    
+                                    // 3. Window Close (Foreground Window)
+                                    if (app_state > 0 && !is_minimized && hd_mouse_x >= win_x + w - 30 && hd_mouse_x <= win_x + w - 15 && hd_mouse_y >= win_y + 8 && hd_mouse_y <= win_y + 23) {
+                                        if (just_clicked) { 
+                                            app_state = z_bg_app; win_x = z_bg_x; win_y = z_bg_y; // Bring background forward automatically
+                                            z_bg_app = 0; // Clear background
+                                            is_dragging = 0; hd_stop_sound(); now_playing = 0; just_clicked = 0; 
+                                        }
+                                    }
 
                                 // Store App Clicks
                                 if (app_state == 15 && !is_minimized && !is_dragging && just_clicked) {
@@ -332,10 +370,20 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                     }
                                     if (just_clicked && hd_mouse_y >= win_y+260 && hd_mouse_y <= win_y+290) {
                                         if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+50) brush_color = 0x00E53935; else if (hd_mouse_x >= win_x+60 && hd_mouse_x <= win_x+90) brush_color = 0x004CAF50; else if (hd_mouse_x >= win_x+100 && hd_mouse_x <= win_x+130) brush_color = 0x002196F3; else if (hd_mouse_x >= win_x+140 && hd_mouse_x <= win_x+170) brush_color = 0x00000000; else if (hd_mouse_x >= win_x+180 && hd_mouse_x <= win_x+210) brush_color = 0xFFFFFFFF; 
-                                        else if (hd_mouse_x >= win_x+225 && hd_mouse_x <= win_x+270) { 
-                                            if(find_file("IMG.BMP") != -1) delete_file("IMG.BMP"); create_file("IMG.BMP", "IMAGE DATA"); 
-                                            int k=0; char* sm = "Image Saved to Disk"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 2;
-                                        }
+                                        else if (hd_mouse_x >= win_x + 225 && hd_mouse_x <= win_x + 270) {
+                                              if (find_file("IMG.BMP") != -1) {
+                                                  delete_file("IMG.BMP");
+                                              }
+                                              create_file("IMG.BMP", "IMAGE DATA");
+                                              int k = 0;
+                                              char * sm = "Image Saved to Disk";
+                                              while (sm[k]) {
+                                                notif_msg[k] = sm[k];
+                                                k++;
+                                              }
+                                              notif_msg[k] = '\0';
+                                              notif_timer = 2;
+                                            }
                                         just_clicked = 0;
                                     }
                                 }
@@ -390,6 +438,23 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         }
                                     }
                                 }
+                                // DAY 162: SAFAR-NAMA MAP CLICKS
+                                    if (app_state == 16 && !is_minimized && !is_dragging && just_clicked) {
+                                        // Map grid par click
+                                        if (hd_mouse_x >= win_x + 10 && hd_mouse_x <= win_x + 390 && hd_mouse_y >= win_y + 40 && hd_mouse_y <= win_y + 290) {
+                                            if (game_winner < 4) { // Max 4 points for demo
+                                                game_board[game_winner * 2] = hd_mouse_x - (win_x + 10);
+                                                game_board[game_winner * 2 + 1] = hd_mouse_y - (win_y + 40);
+                                                game_winner++;
+                                            }
+                                            just_clicked = 0;
+                                        }
+                                        // CLEAR Button
+                                        else if (hd_mouse_y >= win_y + 300 && hd_mouse_y <= win_y + 330 && hd_mouse_x >= win_x + 10 && hd_mouse_x <= win_x + 110) {
+                                            game_winner = 0; 
+                                            just_clicked = 0;
+                                        }
+                                    }
 
                                 // Calculator
                                 if (app_state == 5 && !is_minimized && !is_dragging && just_clicked) {
@@ -405,6 +470,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         }
                                     }
                                 }
+                                
 
                                 // Taskbar 
                                 int tb_width = 420, tb_x = (1024 - tb_width) / 2, tb_y = 768 - 50 - 15;
@@ -442,7 +508,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                     } 
                                     else if (app_state == 0) { 
                                         icon_moved = 0;
-                                        for(int i=0; i<10; i++) { 
+                                        for(int i=0; i<12; i++) { 
                                             if (hd_mouse_x >= icon_x[i] && hd_mouse_x <= icon_x[i]+40 && hd_mouse_y >= icon_y[i] && hd_mouse_y <= icon_y[i]+40) { 
                                                 dragging_icon = i; 
                                             }
@@ -469,18 +535,23 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         else if (dragging_icon == 7) { app_state = 13; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 8) { app_state = 14; win_x = 350; win_y = 150; is_minimized = 0; }
                                         else if (dragging_icon == 9) { app_state = 15; win_x = 280; win_y = 150; is_minimized = 0; } 
-                                    }
+                                        else if (dragging_icon == 10) { app_state = 16; win_x = 312; win_y = 150; is_minimized = 0; game_winner = 0; } // Safar-nama
+                                        else if (dragging_icon == 11) { app_state = 17; win_x = 312; win_y = 150; is_minimized = 0; } // Micro Browser
+                                        }
                                     dragging_icon = -1;
                                 }
-                            }
+                              }
+                           
                         }
-                    } else { 
+                    }
+                     else { 
+                        // --- YAHAN SE KEYBOARD DATA SHURU ---
                         if (!(data & 0x80)) { 
                             idle_seconds = 0; 
                             is_screensaver = 0; 
                             
                             if (app_state == -1) {
-                                if (data == 0x1C) { 
+                                if (data == 0x1C || data == 0x9C) { 
                                     if (pwd_buffer[0]=='1' && pwd_buffer[1]=='2' && pwd_buffer[2]=='3' && pwd_buffer[3]=='4' && pwd_buffer[4]=='\0') { 
                                         app_state = 0; 
                                     } 
@@ -500,83 +571,72 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                         pwd_buffer[pwd_idx] = '\0'; 
                                     } 
                                 }
-                                continue; 
-                            }
-
-                            if (data == 0x1C) { 
-                                if (term_idx > 0 && app_state == 1 && !is_minimized) { 
-                                    char echo_buf[55] = "> "; 
-                                    int e_idx = 0;
-                                    while (term_buffer[e_idx] != '\0') { 
-                                        echo_buf[e_idx + 2] = term_buffer[e_idx]; 
-                                        e_idx++; 
+                            } else {
+                                if (data == 0x1C || data == 0x9C) { 
+                                    if (term_idx > 0 && app_state == 1 && !is_minimized) { 
+                                        char echo_buf[55] = "> "; 
+                                        int e_idx = 0;
+                                        while (term_buffer[e_idx] != '\0') { 
+                                            echo_buf[e_idx + 2] = term_buffer[e_idx]; 
+                                            e_idx++; 
+                                        } 
+                                        echo_buf[e_idx + 2] = '\0'; 
+                                        hd_print(echo_buf);
+                                        
+                                        if (term_buffer[0]=='r' && term_buffer[1]=='u' && term_buffer[2]=='n') { 
+                                            target_ind_file = find_file("app.ind"); 
+                                            if (target_ind_file != -1) ind_loading = 1; 
+                                            else hd_print("Error: app.ind not found!"); 
+                                        }
+                                        else if (term_buffer[0]=='h' && term_buffer[1]=='e' && term_buffer[2]=='l' && term_buffer[3]=='p') {
+                                            hd_print("Commands: help, about, clear, run [app]"); 
+                                        }
+                                        else if (term_buffer[0]=='c' && term_buffer[1]=='l' && term_buffer[2]=='e' && term_buffer[3]=='a' && term_buffer[4]=='r') {
+                                            hd_term_lines = 0; 
+                                        }
+                                        else if (term_buffer[0]=='a' && term_buffer[1]=='b' && term_buffer[2]=='o' && term_buffer[3]=='u' && term_buffer[4]=='t') {
+                                            hd_print("Micro OS JS Bridge Ready"); 
+                                        }
+                                        else {
+                                            hd_print("Command not found."); 
+                                        }
+                                        term_buffer[0] = '\0'; term_idx = 0;
                                     } 
-                                    echo_buf[e_idx + 2] = '\0'; 
-                                    hd_print(echo_buf);
-                                    
-                                    if (term_buffer[0]=='r' && term_buffer[1]=='u' && term_buffer[2]=='n') { 
-                                        target_ind_file = find_file("app.ind"); 
-                                        if (target_ind_file != -1) ind_loading = 1; 
-                                        else hd_print("Error: app.ind not found!"); 
+                                    else if (app_state == 4 && !is_minimized) { 
+                                        term_buffer[0] = '\0'; term_idx = 0; 
                                     }
-                                    else if (term_buffer[0]=='h' && term_buffer[1]=='e' && term_buffer[2]=='l' && term_buffer[3]=='p') {
-                                        hd_print("Commands: help, about, clear, run [app]"); 
-                                    }
-                                    else if (term_buffer[0]=='c' && term_buffer[1]=='l' && term_buffer[2]=='e' && term_buffer[3]=='a' && term_buffer[4]=='r') {
-                                        hd_term_lines = 0; 
-                                    }
-                                    else if (term_buffer[0]=='a' && term_buffer[1]=='b' && term_buffer[2]=='o' && term_buffer[3]=='u' && term_buffer[4]=='t') {
-                                        hd_print("Micro OS JS Bridge Ready"); 
-                                    }
-                                    else {
-                                        hd_print("Command not found."); 
-                                    }
-                                    
-                                    term_buffer[0] = '\0'; 
-                                    term_idx = 0;
-                                } 
-                                else if (app_state == 4 && !is_minimized) { 
-                                    term_buffer[0] = '\0'; 
-                                    term_idx = 0; 
                                 }
-                            }
-                            else if (data == 0x0E) { 
-                                if (app_state == 1 || app_state == 4) { 
-                                    if (term_idx > 0) { 
-                                        term_idx--; 
-                                        term_buffer[term_idx] = '\0'; 
-                                    } 
-                                }
-                                else if (app_state == 11 && ind_input_idx > 0 && !is_minimized) { 
-                                    ind_input_idx--; 
-                                    ind_input_buf[ind_input_idx] = '\0'; 
-                                }
-                            }
-                            else if (!is_minimized) { 
-                                char c = key_map[data]; 
-                                if (c != 0) { 
+                                else if (data == 0x0E) { 
                                     if (app_state == 1 || app_state == 4) { 
-                                        if (term_idx < 45) { 
-                                            term_buffer[term_idx] = c; 
-                                            term_idx++; 
-                                            term_buffer[term_idx] = '\0'; 
+                                        if (term_idx > 0) { 
+                                            term_idx--; term_buffer[term_idx] = '\0'; 
                                         } 
                                     }
-                                    else if (app_state == 11 && ind_input_idx < 25) { 
-                                        ind_input_buf[ind_input_idx] = c; 
-                                        ind_input_idx++; 
-                                        ind_input_buf[ind_input_idx] = '\0'; 
+                                    else if (app_state == 11 && ind_input_idx > 0 && !is_minimized) { 
+                                        ind_input_idx--; ind_input_buf[ind_input_idx] = '\0'; 
                                     }
-                                } 
+                                }
+                                else if (!is_minimized) { 
+                                    char c = key_map[data]; 
+                                    if (c != 0) { 
+                                        if (app_state == 1 || app_state == 4) { 
+                                            if (term_idx < 45) { 
+                                                term_buffer[term_idx] = c; term_idx++; term_buffer[term_idx] = '\0'; 
+                                            } 
+                                        }
+                                        else if (app_state == 11 && ind_input_idx < 25) { 
+                                            ind_input_buf[ind_input_idx] = c; ind_input_idx++; ind_input_buf[ind_input_idx] = '\0'; 
+                                        }
+                                    } 
+                                }
                             }
                         }
                     }
-                    
-                    render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing); 
                 }
+                render_desktop_bg(hd_mouse_x, hd_mouse_y, app_state, win_x, win_y, term_buffer, h, m, start_menu_open, current_ram, ctx_open, ctx_x, ctx_y, is_minimized, calc_display, theme_idx, game_board, game_winner, is_screensaver, ss_x, ss_y, icon_x, icon_y, pwd_buffer, system_uptime, action_center_open, ind_loading, notif_y, notif_msg, ind_input_buf, day, month, year, now_playing); 
             }
-        }
 
+        }
         init_gdt(); 
         init_paging(); 
         init_task_manager(); 

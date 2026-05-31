@@ -2,7 +2,7 @@
 #define IDT_H
 #include "../kernel/timer.h" // YEH LINE ADD KARO
 #include "../kernel/io.h"
-
+extern void context_switch_handler();
 struct idt_entry {
     unsigned short base_low;
     unsigned short sel;
