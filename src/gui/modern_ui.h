@@ -23,7 +23,47 @@ extern int battery_percentage;
 extern int sys_brightness;
 extern int sys_volume;
 extern int power_saver;
+// ==============================================================
+// DAY 166: ALPHA BLENDING ENGINE (GLASS UI / ACRYLIC EFFECT)
+// ==============================================================
+void draw_glass_rect(int start_x, int start_y, int w, int h, int radius, unsigned int hex_color, int alpha) {
+    unsigned int fg_r = (hex_color >> 16) & 0xFF;
+    unsigned int fg_g = (hex_color >> 8) & 0xFF;
+    unsigned int fg_b = hex_color & 0xFF;
 
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            // Smooth Curved Corners (Pure Integer Math, No math.h!)
+            if (x < radius && y < radius) {
+                if ((radius - x) * (radius - x) + (radius - y) * (radius - y) > radius * radius) continue;
+            } else if (x >= w - radius && y < radius) {
+                if ((x - (w - radius - 1)) * (x - (w - radius - 1)) + (radius - y) * (radius - y) > radius * radius) continue;
+            } else if (x < radius && y >= h - radius) {
+                if ((radius - x) * (radius - x) + (y - (h - radius - 1)) * (y - (h - radius - 1)) > radius * radius) continue;
+            } else if (x >= w - radius && y >= h - radius) {
+                if ((x - (w - radius - 1)) * (x - (w - radius - 1)) + (y - (h - radius - 1)) * (y - (h - radius - 1)) > radius * radius) continue;
+            }
+
+            int px = start_x + x;
+            int py = start_y + y;
+            if (px < 0 || px >= 1024 || py < 0 || py >= 768) continue;
+
+            // 1. Zameen (Background) ka asil rang uthao
+            unsigned int bg_color = high_res_buffer[py * 1024 + px];
+            unsigned int bg_r = (bg_color >> 16) & 0xFF;
+            unsigned int bg_g = (bg_color >> 8) & 0xFF;
+            unsigned int bg_b = bg_color & 0xFF;
+
+            // 2. Alpha Formula (Rangon ko mix karo - 0 to 255)
+            unsigned int out_r = (fg_r * alpha + bg_r * (255 - alpha)) / 255;
+            unsigned int out_g = (fg_g * alpha + bg_g * (255 - alpha)) / 255;
+            unsigned int out_b = (fg_b * alpha + bg_b * (255 - alpha)) / 255;
+
+            // 3. Wapas VRAM mein daalo
+            high_res_buffer[py * 1024 + px] = (out_r << 16) | (out_g << 8) | out_b;
+        }
+    }
+}
 void draw_scaled_char(char c, int x, int y, unsigned int hex_color, int scale) {
     if (c < 32 || c > 122) return; 
     int font_idx = c - 32;
@@ -104,12 +144,20 @@ void draw_gradient_wallpaper(int theme_idx) {
 
 void draw_modern_taskbar(int h, int m, int active_app) {
     int tb_width = 420, tb_height = 50, tb_x = (1024 - tb_width) / 2, tb_y = 768 - tb_height - 15;  
-    draw_rounded_rect(tb_x + 2, tb_y + 4, tb_width, tb_height, 15, 0x00111111); 
-    draw_rounded_rect(tb_x, tb_y, tb_width, tb_height, 15, 0x002D2D30);      
-    draw_rounded_rect(tb_x + 20, tb_y + 10, 30, 30, 8, COLOR_ACCENT); draw_hd_string("M", tb_x + 26, tb_y + 18, COLOR_TEXT, 1);
     
-    draw_app_icon(tb_x + 70, tb_y + 5, 0); draw_app_icon(tb_x + 120, tb_y + 5, 6); draw_app_icon(tb_x + 170, tb_y + 5, 7); draw_app_icon(tb_x + 220, tb_y + 5, 2); draw_app_icon(tb_x + 270, tb_y + 5, 3); draw_app_icon(tb_x + 320, tb_y + 5, 4); 
+    // Main Taskbar Glass
+    draw_glass_rect(tb_x, tb_y, tb_width, tb_height, 15, 0x00111122, 170);      
+    
+    // Start Button & App Icons
+    draw_rounded_rect(tb_x + 20, tb_y + 10, 30, 30, 8, COLOR_ACCENT);
+    draw_app_icon(tb_x + 70, tb_y + 5, 0); 
+    draw_app_icon(tb_x + 120, tb_y + 5, 6); 
+    draw_app_icon(tb_x + 170, tb_y + 5, 7); 
+    draw_app_icon(tb_x + 220, tb_y + 5, 2); 
+    draw_app_icon(tb_x + 270, tb_y + 5, 3); 
+    draw_app_icon(tb_x + 320, tb_y + 5, 4); 
 
+    // Active App Line Indicators
     if (active_app == 2) draw_rounded_rect(tb_x + 80, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 3) draw_rounded_rect(tb_x + 130, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 1) draw_rounded_rect(tb_x + 180, tb_y + 45, 20, 3, 1, 0xFFFFFF);
@@ -117,11 +165,17 @@ void draw_modern_taskbar(int h, int m, int active_app) {
     if (active_app == 6) draw_rounded_rect(tb_x + 280, tb_y + 45, 20, 3, 1, 0xFFFFFF);
     if (active_app == 8) draw_rounded_rect(tb_x + 330, tb_y + 45, 20, 3, 1, 0xFFFFFF); 
 
-    draw_rounded_rect(800, 10, 200, 30, 10, 0x00111111); draw_rounded_rect(800, 10, 200, 30, 10, 0x002D2D30);
-    char time_str[6] = {'0','0',':','0','0','\0'}; time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0'; time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
-    draw_hd_string(time_str, 930, 18, COLOR_TEXT, 1); draw_hd_string("W", 840, 18, 0x004CAF50, 1); draw_hd_string("B", 880, 18, 0x002196F3, 1);
+    // Top Right System Tray / Time (Bhi Glassy kar diya!)
+    draw_glass_rect(800, 10, 200, 30, 10, 0x00111122, 170);
+    
+    char time_str[6] = {'0','0',':','0','0','\0'}; 
+    time_str[0] = (h / 10) + '0'; time_str[1] = (h % 10) + '0'; 
+    time_str[3] = (m / 10) + '0'; time_str[4] = (m % 10) + '0';
+    
+    draw_hd_string(time_str, 930, 18, COLOR_TEXT, 1); 
+    draw_hd_string("W", 840, 18, 0x004CAF50, 1); 
+    draw_hd_string("B", 880, 18, 0x002196F3, 1);
 }
-
 void draw_hd_window(int win_x, int win_y, int w, int h, char* title) {
     draw_rounded_rect(win_x + 5, win_y + 5, w, h, 10, 0x00111111); 
     draw_rounded_rect(win_x, win_y, w, h, 10, 0x002D2D30); 
@@ -430,38 +484,71 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
 
     draw_modern_taskbar(h, m, app_state);
 
+  // ==========================================
+    // 1. GLASSY START MENU
+    // ==========================================
     if (start_menu) {
         int sm_w = 240, sm_h = 320, sm_x = 312, sm_y = 708 - sm_h - 10;
-        draw_rounded_rect(sm_x + 5, sm_y + 5, sm_w, sm_h, 10, 0x00111111); draw_rounded_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00252526); draw_rounded_rect(sm_x+20, sm_y+20, 30, 30, 15, COLOR_ACCENT); draw_hd_string("Micro OS", sm_x + 60, sm_y + 28, 0xFFFFFF, 1); draw_rounded_rect(sm_x + 20, sm_y + 60, sm_w - 40, 2, 0, 0x00444444); 
-        draw_rounded_rect(sm_x+20, sm_y+80, 15, 15, 3, 0x004CAF50); draw_hd_string("Notepad", sm_x + 45, sm_y + 83, COLOR_TEXT, 1); draw_rounded_rect(sm_x+20, sm_y+115, 15, 15, 3, 0x00E53935); draw_hd_string("Calculator", sm_x + 45, sm_y + 118, COLOR_TEXT, 1); draw_rounded_rect(sm_x+20, sm_y+150, 15, 15, 3, 0x00FFFFFF); draw_hd_string("Calendar", sm_x + 45, sm_y + 153, COLOR_TEXT, 1); draw_rounded_rect(sm_x+20, sm_y+185, 15, 15, 3, 0x009E9E9E); draw_hd_string("Settings", sm_x + 45, sm_y + 188, COLOR_TEXT, 1); draw_rounded_rect(sm_x+20, sm_y+220, 15, 15, 3, 0x00FFB300); draw_hd_string("HD Paint", sm_x + 45, sm_y + 223, COLOR_TEXT, 1);
-        draw_rounded_rect(sm_x + 20, sm_y + 265, sm_w - 40, 35, 5, COLOR_DANGER); draw_hd_string("O", sm_x + 60, sm_y + 276, 0xFFFFFF, 1); draw_hd_string("|", sm_x + 63, sm_y + 272, 0xFFFFFF, 1); draw_hd_string("SHUT DOWN", sm_x + 85, sm_y + 276, 0xFFFFFF, 1);
-    }
-
-   if (action_center_open) {
-        int ac_w = 250, ac_h = 400, ac_x = 760, ac_y = 50; 
-        draw_rounded_rect(ac_x + 5, ac_y + 5, ac_w, ac_h, 15, 0x00111111); draw_rounded_rect(ac_x, ac_y, ac_w, ac_h, 15, 0x002D2D30); draw_hd_string("Control Center", ac_x + 20, ac_y + 20, 0xFFFFFF, 1);
         
-        draw_rounded_rect(ac_x + 20, ac_y + 60, 210, 80, 10, 0x001E1E1E); draw_rounded_rect(ac_x + 30, ac_y + 70, 40, 40, 20, 0x004CAF50); draw_hd_string("W", ac_x + 45, ac_y + 85, 0xFFFFFF, 1); draw_hd_string("Wi-Fi", ac_x + 80, ac_y + 85, 0xFFFFFF, 1);
+        // Purane solid rectangles ki jagah sirf ek Glass Box
+        draw_glass_rect(sm_x, sm_y, sm_w, sm_h, 10, 0x00111122, 190); 
+        
+        draw_rounded_rect(sm_x+20, sm_y+20, 30, 30, 15, COLOR_ACCENT);
+        draw_hd_string("Micro OS", sm_x + 60, sm_y + 28, 0xFFFFFF, 1);
+        draw_rounded_rect(sm_x + 20, sm_y + 60, sm_w - 40, 2, 0, 0x00444444); 
+        draw_rounded_rect(sm_x+20, sm_y+80, 15, 15, 3, 0x004CAF50);
+        draw_hd_string("Notepad", sm_x + 45, sm_y + 83, COLOR_TEXT, 1); 
+        draw_rounded_rect(sm_x+20, sm_y+115, 15, 15, 3, 0x00E53935);
+        draw_hd_string("Calculator", sm_x + 45, sm_y + 118, COLOR_TEXT, 1); 
+        draw_rounded_rect(sm_x+20, sm_y+150, 15, 15, 3, 0x00FFFFFF); 
+        draw_hd_string("Calendar", sm_x + 45, sm_y + 153, COLOR_TEXT, 1); 
+        draw_rounded_rect(sm_x+20, sm_y+185, 15, 15, 3, 0x009E9E9E); 
+        draw_hd_string("Settings", sm_x + 45, sm_y + 188, COLOR_TEXT, 1); 
+        draw_rounded_rect(sm_x+20, sm_y+220, 15, 15, 3, 0x00FFB300); 
+        draw_hd_string("HD Paint", sm_x + 45, sm_y + 223, COLOR_TEXT, 1);
+        
+        draw_rounded_rect(sm_x + 20, sm_y + 265, sm_w - 40, 35, 5, COLOR_DANGER); 
+        draw_hd_string("O", sm_x + 60, sm_y + 276, 0xFFFFFF, 1); 
+        draw_hd_string("|", sm_x + 63, sm_y + 272, 0xFFFFFF, 1); 
+        draw_hd_string("SHUT DOWN", sm_x + 85, sm_y + 276, 0xFFFFFF, 1);
+    }
+// ==========================================
+    // 2. GLASSY ACTION CENTER
+    // ==========================================
+    if (action_center_open) {
+        int ac_w = 250, ac_h = 400, ac_x = 760, ac_y = 50; 
+        
+        // Purane solid rectangles hataye aur Glass lagaya
+        draw_glass_rect(ac_x, ac_y, ac_w, ac_h, 15, 0x000F0F1A, 200); 
+        
+        draw_hd_string("Control Center", ac_x + 20, ac_y + 20, 0xFFFFFF, 1);
+        
+        draw_rounded_rect(ac_x + 20, ac_y + 60, 210, 80, 10, 0x001E1E1E); 
+        draw_rounded_rect(ac_x + 30, ac_y + 70, 40, 40, 20, 0x004CAF50); 
+        draw_hd_string("W", ac_x + 45, ac_y + 85, 0xFFFFFF, 1); 
+        draw_hd_string("Wi-Fi", ac_x + 80, ac_y + 85, 0xFFFFFF, 1);
         
         // Dynamic Volume Slider
-        draw_rounded_rect(ac_x + 20, ac_y + 160, 210, 80, 10, 0x001E1E1E); draw_hd_string("Volume", ac_x + 30, ac_y + 175, 0xFFFFFF, 1); 
+        draw_rounded_rect(ac_x + 20, ac_y + 160, 210, 80, 10, 0x001E1E1E); 
+        draw_hd_string("Volume", ac_x + 30, ac_y + 175, 0xFFFFFF, 1); 
         draw_rounded_rect(ac_x + 30, ac_y + 200, 180, 10, 5, 0x00333333); 
-        draw_rounded_rect(ac_x + 30, ac_y + 200, sys_volume, 10, 5, 0x002196F3); // Blue fill controlled by memory
-        draw_rounded_rect(ac_x + 30 + sys_volume - 5, ac_y + 195, 10, 20, 5, 0xFFFFFF); // Handle
+        draw_rounded_rect(ac_x + 30, ac_y + 200, sys_volume, 10, 5, 0x002196F3); 
+        draw_rounded_rect(ac_x + 30 + sys_volume - 5, ac_y + 195, 10, 20, 5, 0xFFFFFF); 
         
         // Dynamic Brightness Slider
-        draw_rounded_rect(ac_x + 20, ac_y + 260, 210, 80, 10, 0x001E1E1E); draw_hd_string("Brightness", ac_x + 30, ac_y + 275, 0xFFFFFF, 1); 
+        draw_rounded_rect(ac_x + 20, ac_y + 260, 210, 80, 10, 0x001E1E1E); 
+        draw_hd_string("Brightness", ac_x + 30, ac_y + 275, 0xFFFFFF, 1); 
         draw_rounded_rect(ac_x + 30, ac_y + 300, 180, 10, 5, 0x00333333); 
-        draw_rounded_rect(ac_x + 30, ac_y + 300, sys_brightness, 10, 5, 0x00FFB300); // Orange fill controlled by memory
-        draw_rounded_rect(ac_x + 30 + sys_brightness - 5, ac_y + 295, 10, 20, 5, 0xFFFFFF); // Handle
+        draw_rounded_rect(ac_x + 30, ac_y + 300, sys_brightness, 10, 5, 0x00FFB300); 
+        draw_rounded_rect(ac_x + 30 + sys_brightness - 5, ac_y + 295, 10, 20, 5, 0xFFFFFF); 
     }
-    if (ctx_open) {
-        draw_rounded_rect(ctx_x + 5, ctx_y + 5, 180, 120, 5, 0x00111111); draw_rounded_rect(ctx_x, ctx_y, 180, 120, 5, 0x002D2D30);         
+if (ctx_open) {
+        draw_glass_rect(ctx_x, ctx_y, 180, 120, 5, 0x00111122, 200); 
+        
         draw_hd_string("> About PC", ctx_x + 15, ctx_y + 15, COLOR_TEXT, 1); 
         draw_hd_string("> Terminal", ctx_x + 15, ctx_y + 50, COLOR_TEXT, 1); 
         draw_hd_string("> Settings", ctx_x + 15, ctx_y + 85, COLOR_TEXT, 1); 
     }
-
     draw_notification(notif_y, notif_msg);
     draw_hd_mouse_pointer(mx, my); 
     apply_hardware_brightness(high_res_buffer, sys_brightness, 1024, 768);
