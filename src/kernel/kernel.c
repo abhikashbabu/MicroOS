@@ -555,15 +555,53 @@ hd_stop_sound();                            }
                         }
                     }
                     
+               // ==============================================================
+                    // DAY 167: SMART Z-INDEX TASKBAR DISPATCHER
+                    // ==============================================================
                     int tb_width = 420, tb_x = (1024 - tb_width) / 2, tb_y = 768 - 50 - 15;
+                    
                     if (!is_dragging && hd_mouse_y >= tb_y && hd_mouse_y <= tb_y + 50 && just_clicked) {
-                        if (hd_mouse_x >= tb_x+20 && hd_mouse_x <= tb_x+50) { start_menu_open = !start_menu_open; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+70 && hd_mouse_x <= tb_x+100) { if (app_state == 2) is_minimized = !is_minimized; else { app_state = 2; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+120 && hd_mouse_x <= tb_x+150) { if (app_state == 3) is_minimized = !is_minimized; else { app_state = 3; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+170 && hd_mouse_x <= tb_x+200) { if (app_state == 1) is_minimized = !is_minimized; else { app_state = 1; win_x = 312; win_y = 200; is_minimized = 0; } start_menu_open = 0; term_buffer[0] = '\0'; term_idx = 0; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+220 && hd_mouse_x <= tb_x+250) { if (app_state == 5) is_minimized = !is_minimized; else { app_state = 5; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+270 && hd_mouse_x <= tb_x+300) { if (app_state == 6) is_minimized = !is_minimized; else { app_state = 6; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
-                        else if (hd_mouse_x >= tb_x+320 && hd_mouse_x <= tb_x+350) { if (app_state == 8) is_minimized = !is_minimized; else { app_state = 8; win_x = 350; win_y = 150; is_minimized = 0; } start_menu_open = 0; just_clicked = 0; }
+                        
+                        // 1. Start Menu Click
+                        if (hd_mouse_x >= tb_x+20 && hd_mouse_x <= tb_x+50) { 
+                            start_menu_open = !start_menu_open; just_clicked = 0; 
+                        }
+                        else {
+                            int clicked_app = -1;
+                            
+                            // 2. Pata karo konsi app ke icon par click hua
+                            if (hd_mouse_x >= tb_x+70 && hd_mouse_x <= tb_x+100) clicked_app = 2;       // File Explorer
+                            else if (hd_mouse_x >= tb_x+120 && hd_mouse_x <= tb_x+150) clicked_app = 3; // Task Manager
+                            else if (hd_mouse_x >= tb_x+170 && hd_mouse_x <= tb_x+200) clicked_app = 1; // Terminal
+                            else if (hd_mouse_x >= tb_x+220 && hd_mouse_x <= tb_x+250) clicked_app = 5; // Calculator
+                            else if (hd_mouse_x >= tb_x+270 && hd_mouse_x <= tb_x+300) clicked_app = 6; // Tic-Tac-Toe
+                            else if (hd_mouse_x >= tb_x+320 && hd_mouse_x <= tb_x+350) clicked_app = 8; // Settings
+                            
+                            // 3. SMART Z-INDEX LOGIC
+                            if (clicked_app != -1) {
+                                if (app_state == clicked_app) { 
+                                    // Agar app pehle se aage hai, toh usko minimize kar do
+                                    is_minimized = !is_minimized; 
+                                } 
+                                else if (z_bg_app == clicked_app) {
+                                    // Z-INDEX SWAP: App background (sleep) mein thi, usko aage lao!
+                                    open_window(z_bg_app, &app_state, &win_x, &win_y); 
+                                    is_minimized = 0;
+                                } 
+                                else {
+                                    // Ekdum naya app kholo, aur current wale ko background (sleep) me daalo
+                                    if (app_state > 0 && !is_minimized) {
+                                        z_bg_app = app_state; z_bg_x = win_x; z_bg_y = win_y; 
+                                    }
+                                    app_state = clicked_app; win_x = 312; win_y = 200; is_minimized = 0; 
+                                }
+                                
+                                // Safai
+                                start_menu_open = 0; 
+                                if (clicked_app == 1) { term_buffer[0] = '\0'; term_idx = 0; }
+                                just_clicked = 0; 
+                            }
+                        }
                     }
                     
                     if (start_menu_open && just_clicked) {
