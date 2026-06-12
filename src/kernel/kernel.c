@@ -110,12 +110,35 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             init_fs(); 
             init_mouse();
             init_acpi(); 
+            
             __asm__ volatile ("sti"); 
             vesa_framebuffer = (unsigned int*) fb_addr;
 
             play_boot_animation();
             create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
 
+// NAYA: HARDWARE SE MAC ADDRESS READ & PRINT
+            unsigned char mac[6];
+            if (pci_get_rtl8139_mac(mac)) {
+                hd_print("[OK] RTL8139 Network Card Detected!");
+                
+                // Hex format mein MAC print karne ke liye custom logic (XX:XX:XX:XX:XX:XX)
+                char mac_str[30] = "MAC: ";
+                char hex_chars[] = "0123456789ABCDEF";
+                int idx = 5;
+                for(int i = 0; i < 6; i++) {
+                    mac_str[idx++] = hex_chars[(mac[i] >> 4) & 0x0F];
+                    mac_str[idx++] = hex_chars[mac[i] & 0x0F];
+                    if(i < 5) mac_str[idx++] = ':';
+                }
+                mac_str[idx] = '\0';
+                
+                // Terminal par MAC address print karo
+                hd_print(mac_str);
+            } else {
+                hd_print("[FAIL] No Network Card Found.");
+            }
+            
             int app_state = -1; int win_x = 312, win_y = 200; 
             int is_dragging = 0, start_menu_open = 0, is_minimized = 0;
             int ctx_open = 0, ctx_x = 0, ctx_y = 0; 

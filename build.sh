@@ -35,8 +35,8 @@ menuentry "Micro OS v3.0 (Smart Fallback Mode)" {
 }
 EOF
 
-
-
 grub-mkrescue -o microos.iso isodir
 echo "Booting ISO in QEMU..."
-qemu-system-i386 -cdrom microos.iso -drive format=raw,file=hdd.img,if=ide -vga std -boot d
+
+# NAYA FIX: Yahan humne QEMU ko RTL8139 Network Card lagane ka order de diya hai
+qemu-system-i386 -cdrom microos.iso -drive format=raw,file=hdd.img,if=ide -vga std -net nic,model=rtl8139 -net user -boot d
