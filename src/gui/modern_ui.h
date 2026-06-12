@@ -66,17 +66,57 @@ void draw_glass_rect(int start_x, int start_y, int w, int h, int radius, unsigne
         }
     }
 }
+// ==============================================================
+// DAY 169: PSF VECTOR STROKE ENGINE (SMOOTH SCALABLE TEXT)
+// ==============================================================
 void draw_scaled_char(char c, int x, int y, unsigned int hex_color, int scale) {
     if (c < 32 || c > 122) return; 
     int font_idx = c - 32;
+    
     for (int row = 0; row < 8; row++) {
         unsigned char row_data = modern_font[font_idx][row];
         for (int col = 0; col < 8; col++) {
-            if ((row_data >> (7 - col)) & 1) draw_rounded_rect(x + (col * scale), y + (row * scale), scale, scale, 0, hex_color);
+            
+            // Agar yeh pixel ON hai
+            if ((row_data >> (7 - col)) & 1) {
+                int px = x + (col * scale);
+                int py = y + (row * scale);
+                
+                if (scale <= 2) {
+                    // Chhote text par pixel art hi theek lagta hai (fast render)
+                    draw_rounded_rect(px, py, scale, scale, 0, hex_color);
+                } else {
+                    // ==========================================
+                    // BADE TEXT PAR: Vector Bridging Magic!
+                    // ==========================================
+                    
+                    // 1. Core Vector Dot (Perfect Circle banayega)
+                    draw_rounded_rect(px, py, scale, scale, scale / 2, hex_color);
+                    
+                    // 2. Horizontal Bridge (Right wale circle se smooth connection)
+                    if (col < 7 && ((row_data >> (7 - (col + 1))) & 1)) {
+                        draw_rounded_rect(px + (scale / 2), py, scale, scale, 0, hex_color);
+                    }
+                    
+                    // 3. Vertical Bridge (Neeche wale circle se smooth connection)
+                    if (row < 7 && ((modern_font[font_idx][row + 1] >> (7 - col)) & 1)) {
+                        draw_rounded_rect(px, py + (scale / 2), scale, scale, 0, hex_color);
+                    }
+                    
+                    // 4. Forward Diagonal Bridge (\ stroke)
+                    if (col < 7 && row < 7 && ((modern_font[font_idx][row + 1] >> (7 - (col + 1))) & 1)) {
+                        draw_rounded_rect(px + (scale / 2), py + (scale / 2), scale, scale, 0, hex_color);
+                    }
+                    
+                    // 5. Backward Diagonal Bridge (/ stroke)
+                    if (col > 0 && row < 7 && ((modern_font[font_idx][row + 1] >> (7 - (col - 1))) & 1)) {
+                        draw_rounded_rect(px - (scale / 2), py + (scale / 2), scale, scale, 0, hex_color);
+                    }
+                }
+            }
         }
     }
 }
-
 void draw_hd_string(char* str, int start_x, int start_y, unsigned int hex_color, int scale) {
     int x = start_x; 
     for(int i = 0; str[i] != '\0'; i++) { draw_scaled_char(str[i], x, start_y, hex_color, scale); x += (8 * scale); }
