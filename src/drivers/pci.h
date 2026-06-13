@@ -7,27 +7,29 @@
 #define RTL8139_VENDOR_ID 0x10EC
 #define RTL8139_DEVICE_ID 0x8139
 
-// Purana 16-bit reader
-unsigned int pci_read_word(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset) {
-    unsigned int address;
-    unsigned int lbus  = (unsigned int)bus;
-    unsigned int lslot = (unsigned int)slot;
-    unsigned int lfunc = (unsigned int)func;
+__attribute__((weak)) unsigned int rtl_io_base = 0;
+__attribute__((weak)) unsigned char rtl_mac[6];
 
-    address = (unsigned int)((lbus << 16) | (lslot << 11) | (lfunc << 8) | (offset & 0xFC) | ((unsigned int)0x80000000));
+static unsigned int pci_read_word(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset) {
+    unsigned int address = (unsigned int)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xFC) | 0x80000000);
     outl(0xCF8, address);
     return (inl(0xCFC) >> ((offset & 2) * 8)) & 0xFFFF;
 }
 
-// NAYA: 32-bit Data Reader (BAR0 padhne ke liye zaroori hai)
-unsigned int pci_read_dword(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset) {
+static unsigned int pci_read_dword(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset) {
     unsigned int address = (unsigned int)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xFC) | 0x80000000);
     outl(0xCF8, address);
     return inl(0xCFC);
 }
 
-// Tumhara hardware scanner (As it is)
-void scan_pci_bus() {
+// NAYA MAGIC: PCI Command bhejne ke liye Write Function
+static void pci_write_dword(unsigned short bus, unsigned short slot, unsigned short func, unsigned char offset, unsigned int data) {
+    unsigned int address = (unsigned int)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xFC) | 0x80000000);
+    outl(0xCF8, address);
+    outl(0xCFC, data);
+}
+
+static void scan_pci_bus() {
     print_string("Scanning PCI Hardware Bus...\n");
     print_string("----------------------------------\n");
     int count = 0;
@@ -51,10 +53,7 @@ void scan_pci_bus() {
     print_string("\n");
 }
 
-// ==============================================================
-// NAYA: RTL8139 MAC ADDRESS EXTRACTOR
-// ==============================================================
-int pci_get_rtl8139_mac(unsigned char* mac_out) {
+static int pci_get_rtl8139_mac() {
     for (int bus = 0; bus < 256; bus++) {
         for (int slot = 0; slot < 32; slot++) {
             unsigned short vendor = pci_read_word(bus, slot, 0, 0);
@@ -62,22 +61,27 @@ int pci_get_rtl8139_mac(unsigned char* mac_out) {
                 unsigned short device = pci_read_word(bus, slot, 0, 2);
                 if (device == RTL8139_DEVICE_ID) {
                     
-                    // 1. Hardware mil gaya! Ab Offset 0x10 se BAR0 (Base Address) read karo
+                    // ========================================================
+                    // 1. DMA HANDBRAKE RELEASE (ENABLE PCI BUS MASTERING)
+                    // ========================================================
+                    unsigned int pci_cmd = pci_read_dword(bus, slot, 0, 0x04);
+                    pci_cmd |= 0x0004; // Bit 2 ON karte hi Handbrake khul gaya!
+                    pci_write_dword(bus, slot, 0, 0x04, pci_cmd);
+
+                    // 2. Base Address Read karo
                     unsigned int bar0 = pci_read_dword(bus, slot, 0, 0x10);
+                    rtl_io_base = bar0 & 0xFFFFFFFC; 
                     
-                    // 2. Aakhiri 2 bits (Type flags) ko ignore karke I/O Port Address nikalo
-                    unsigned int io_base = bar0 & 0xFFFFFFFC; 
-                    
-                    // 3. I/O Port se 6 Bytes (MAC Address) nikal lo!
+                    // 3. MAC Address nikalo
                     for(int i = 0; i < 6; i++) {
-                        mac_out[i] = inb(io_base + i);
+                        rtl_mac[i] = inb(rtl_io_base + i);
                     }
-                    return 1; // Success
+                    return 1; 
                 }
             }
         }
     }
-    return 0; // Card nahi mila
+    return 0; 
 }
 
 #endif

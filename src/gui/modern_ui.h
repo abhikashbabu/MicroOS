@@ -454,7 +454,7 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
             draw_rounded_rect(cx + 340, cy + 240, 50, 50, 10, 0x00111111); draw_hd_string("W", cx + 355, cy + 250, 0x00B0BEC5, 3); 
         }
 
-        // =========================================================================
+      // =========================================================================
         // 6. THE SLEEP OVERLAY FOR BACKGROUND APP (Sirf Layer 0)
         // =========================================================================
         if (layer == 0) {
@@ -464,7 +464,6 @@ void render_desktop_bg(int mx, int my, int app_state, int win_x, int win_y, char
             else if(current_app==13) w=360; else if(current_app==14) w=350; else if(current_app==15) w=470;
             else if(current_app==16) w=400; else if(current_app==17) w=500;
             
-            // Background app draw hone ke baad us par dark glass laga do (Inactive look)
             draw_glass_rect(cx, cy, w, 350, 10, 0x00000000, 140);
         }
     } // Z-INDEX LOOP ENDS HERE

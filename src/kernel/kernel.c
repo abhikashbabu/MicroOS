@@ -12,7 +12,7 @@
 #include "../kernel/multiboot.h" 
 #include "../gui/modern_ui.h" 
 #include "../kernel/acpi.h"
-
+#include "../drivers/net.h"
 // DAY 162: Z-Index Memory
 int z_bg_app = 0;
 int z_bg_x = 340;
@@ -116,25 +116,28 @@ void kernel_main(unsigned int magic, unsigned int addr) {
 
             play_boot_animation();
             create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
-
-// NAYA: HARDWARE SE MAC ADDRESS READ & PRINT
-            unsigned char mac[6];
-            if (pci_get_rtl8139_mac(mac)) {
-                hd_print("[OK] RTL8139 Network Card Detected!");
+// NAYA: HARDWARE SE MAC ADDRESS READ & NETWORK FIRING
+            if (pci_get_rtl8139_mac()) {
                 
-                // Hex format mein MAC print karne ke liye custom logic (XX:XX:XX:XX:XX:XX)
+                // 1. MAC Print Karo (Ab hum rtl_mac array use karenge)
                 char mac_str[30] = "MAC: ";
                 char hex_chars[] = "0123456789ABCDEF";
                 int idx = 5;
                 for(int i = 0; i < 6; i++) {
-                    mac_str[idx++] = hex_chars[(mac[i] >> 4) & 0x0F];
-                    mac_str[idx++] = hex_chars[mac[i] & 0x0F];
+                    mac_str[idx++] = hex_chars[(rtl_mac[i] >> 4) & 0x0F];
+                    mac_str[idx++] = hex_chars[rtl_mac[i] & 0x0F];
                     if(i < 5) mac_str[idx++] = ':';
                 }
                 mac_str[idx] = '\0';
-                
-                // Terminal par MAC address print karo
                 hd_print(mac_str);
+                
+                // 2. NETWORK CARD INITIALIZE KARO (Sirf ek baar!)
+                rtl8139_init();
+                hd_print("[OK] RTL8139 Driver Initialized!");
+
+                // 3. SEND A MEANINGFUL ARP REQUEST TO ROUTER
+                net_send_arp_request();
+
             } else {
                 hd_print("[FAIL] No Network Card Found.");
             }
@@ -180,13 +183,13 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             key_map[0x49]='9'; key_map[0x52]='0';
 
             while(1) {
+                net_poll_rx();
                 outb(0x70, 0x04); unsigned char rtc_h = inb(0x71); 
                 outb(0x70, 0x02); unsigned char rtc_m = inb(0x71); 
                 outb(0x70, 0x00); unsigned char rtc_s = inb(0x71);
                 outb(0x70, 0x07); unsigned char rtc_d = inb(0x71); 
                 outb(0x70, 0x08); unsigned char rtc_mon = inb(0x71); 
                 outb(0x70, 0x09); unsigned char rtc_y = inb(0x71);
-                
                 int h = (rtc_h & 0x0F) + ((rtc_h / 16) * 10); 
                 int m = (rtc_m & 0x0F) + ((rtc_m / 16) * 10); 
                 int s = (rtc_s & 0x0F) + ((rtc_s / 16) * 10);
@@ -249,6 +252,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                 prev_left_click = left_click;
 
                 if (left_click || right_click) { idle_seconds = 0; is_screensaver = 0; }
+                
 
                 if (data != 0 && !(data & 0x80)) {
                     idle_seconds = 0; is_screensaver = 0; 
@@ -270,6 +274,17 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                                 else if (term_buffer[0]=='h' && term_buffer[1]=='e' && term_buffer[2]=='l' && term_buffer[3]=='p') { hd_print("Commands: help, about, clear, run [app]"); }
                                 else if (term_buffer[0]=='c' && term_buffer[1]=='l' && term_buffer[2]=='e' && term_buffer[3]=='a' && term_buffer[4]=='r') { hd_term_lines = 0; }
                                 else if (term_buffer[0]=='a' && term_buffer[1]=='b' && term_buffer[2]=='o' && term_buffer[3]=='u' && term_buffer[4]=='t') { hd_print("Micro OS JS Bridge Ready"); }
+                                // ================================================
+                                // NAYA: PING COMMAND
+                                // ================================================
+                                else if (term_buffer[0]=='p' && term_buffer[1]=='i' && term_buffer[2]=='n' && term_buffer[3]=='g') { 
+                                    if (network_ready) {
+                                        net_ping_google();
+                                    } else {
+                                        hd_print("Error: Connect to Network First!");
+                                    }
+                                }
+                            
                                 else { hd_print("Command not found."); }
                                 term_buffer[0] = '\0'; term_idx = 0;
                             } 
