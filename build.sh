@@ -37,6 +37,15 @@ EOF
 
 grub-mkrescue -o microos.iso isodir
 echo "Booting ISO in QEMU..."
-
+if [ ! -f "hdd.img" ]; then
+    echo "Creating and formatting 64MB hdd.img to FAT32..."
+    dd if=/dev/zero of=hdd.img bs=1M count=64
+    mkfs.fat -F 32 hdd.img
+    
+    # NAYA MAGIC: Ek test file banakar Hard Drive mein daal do!
+    echo "HELLO OS DEV!" > TEST.TXT
+    mcopy -i hdd.img TEST.TXT ::/TEST.TXT
+fi
 # NAYA FIX: Yahan humne QEMU ko RTL8139 Network Card lagane ka order de diya hai
-qemu-system-i386 -cdrom microos.iso -drive format=raw,file=hdd.img,if=ide -vga std -net nic,model=rtl8139 -net user -boot d
+# NAYA MAGIC: cache=writethrough lagane se data turant hdd.img mein save hoga!
+qemu-system-i386 -cdrom microos.iso -drive format=raw,file=hdd.img,if=ide,cache=writethrough -vga std -net nic,model=rtl8139 -net user -boot d

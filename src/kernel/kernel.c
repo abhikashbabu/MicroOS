@@ -13,6 +13,8 @@
 #include "../gui/modern_ui.h" 
 #include "../kernel/acpi.h"
 #include "../drivers/net.h"
+#include "../drivers/ata.h"
+#include "../fs/fat32.h"
 // DAY 162: Z-Index Memory
 int z_bg_app = 0;
 int z_bg_x = 340;
@@ -114,12 +116,13 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             __asm__ volatile ("sti"); 
             vesa_framebuffer = (unsigned int*) fb_addr;
 
-            play_boot_animation();
+          play_boot_animation();
             create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
-// NAYA: HARDWARE SE MAC ADDRESS READ & NETWORK FIRING
+            
+            // ==============================================================
+            // 1. NETWORK SYSTEM INITIALIZE
+            // ==============================================================
             if (pci_get_rtl8139_mac()) {
-                
-                // 1. MAC Print Karo (Ab hum rtl_mac array use karenge)
                 char mac_str[30] = "MAC: ";
                 char hex_chars[] = "0123456789ABCDEF";
                 int idx = 5;
@@ -131,17 +134,21 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                 mac_str[idx] = '\0';
                 hd_print(mac_str);
                 
-                // 2. NETWORK CARD INITIALIZE KARO (Sirf ek baar!)
                 rtl8139_init();
                 hd_print("[OK] RTL8139 Driver Initialized!");
-
-                // 3. SEND A MEANINGFUL ARP REQUEST TO ROUTER
                 net_send_arp_request();
-
             } else {
                 hd_print("[FAIL] No Network Card Found.");
             }
-            
+
+            // ==============================================================
+            // 2. HARD DRIVE & FAT32 INITIALIZE (CLEANED UP!)
+            // ==============================================================
+            hd_print("[HDD] Mounting C: Drive...");
+            init_fat32();
+            fat32_list_root();
+
+            // Yahan se tumhare saare variables shuru hote hain
             int app_state = -1; int win_x = 312, win_y = 200; 
             int is_dragging = 0, start_menu_open = 0, is_minimized = 0;
             int ctx_open = 0, ctx_x = 0, ctx_y = 0; 
@@ -390,17 +397,43 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         }
                     }
 
-                    if (app_state == 4 && !is_minimized && !is_dragging && just_clicked) {
+               if (app_state == 4 && !is_minimized && !is_dragging && just_clicked) {
+                        
+                        // ============================================
+                        // THE SAVE BUTTON (Save to C:\NOTE.TXT)
+                        // ============================================
                         if (hd_mouse_x >= win_x+280 && hd_mouse_x <= win_x+325 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
-                            if (find_file("NOTE.TXT") != -1) { delete_file("NOTE.TXT"); } create_file("NOTE.TXT", term_buffer);
-                            int k=0; char* sm = "Note Saved!"; while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; notif_timer = 2; just_clicked = 0;
+                            
+                            // Ab yahan sirf "NOTE" likhna hai, baaki backend khud sambhal lega!
+                            fat32_write_file("NOTE", "TXT", term_buffer, term_idx);
+                            
+                            int k=0; char* sm = "Saved to Hard Drive!"; 
+                            while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; 
+                            notif_timer = 3; just_clicked = 0;
                         }
+                        
+                        // ============================================
+                        // THE LOAD BUTTON (Read from C:\NOTE.TXT)
+                        // ============================================
                         if (hd_mouse_x >= win_x+335 && hd_mouse_x <= win_x+380 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
-                            int f = find_file("NOTE.TXT"); 
-                            if (f != -1) { int c=0; while(file_system[f].content[c] != '\0' && c<45) { term_buffer[c] = file_system[f].content[c]; c++; } term_buffer[c] = '\0'; term_idx = c; just_clicked = 0; }
+                            
+                            int file_len = 0;
+                            // Yahan bhi sirf "NOTE" aayega
+                            if (fat32_read_file("NOTE", "TXT", term_buffer, &file_len)) {
+                                term_buffer[file_len] = '\0'; 
+                                term_idx = file_len; 
+                                
+                                int k=0; char* sm = "Loaded from HDD!"; 
+                                while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; 
+                                notif_timer = 3;
+                            } else {
+                                int k=0; char* sm = "File not found!"; 
+                                while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; 
+                                notif_timer = 3;
+                            }
+                            just_clicked = 0;
                         }
                     }
-
                     if (app_state == 8 && !is_minimized && !is_dragging && just_clicked) {
                         if (hd_mouse_y >= win_y+90 && hd_mouse_y <= win_y+140) {
                             if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+70) theme_idx = 0; else if (hd_mouse_x >= win_x+85 && hd_mouse_x <= win_x+135) theme_idx = 1; else if (hd_mouse_x >= win_x+150 && hd_mouse_x <= win_x+200) theme_idx = 2; else if (hd_mouse_x >= win_x+215 && hd_mouse_x <= win_x+265) theme_idx = 3;
