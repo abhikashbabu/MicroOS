@@ -129,50 +129,121 @@ void fat32_delete_file(char* filename, char* ext) {
         }
     }
 }
-
-void fat32_write_file(char* filename, char* ext, char* data, int data_size) {
-    fat32_delete_file(filename, ext); // Puraani file udao agar hai toh!
+// 3. MULTI-SECTOR WRITE ENGINE (LARGE FILES & BMP SUPPORT)
+void fat32_write_file(char* filename, char* ext, unsigned char* data, int data_size) {
+    fat32_delete_file(filename, ext); 
     
-    unsigned char sec_buf[512];
-    unsigned int fat_lba = fat_reserved_sectors;
-    unsigned int free_cluster = 0;
-
-    ata_read_sector(fat_lba, sec_buf);
-    unsigned int* fat_table = (unsigned int*)sec_buf;
-    for(int i = 2; i < 128; i++) { 
-        if (fat_table[i] == 0x00000000) { free_cluster = i; fat_table[i] = 0x0FFFFFFF; break; }
+    int clusters_needed = (data_size + 511) / 512; 
+    unsigned int first_cluster = 0, prev_cluster = 0;
+    unsigned char fat_buf[512] = {0}; // MEMORY CORRUPTION FIX
+    unsigned int current_fat_sec = 0xFFFFFFFF;
+    int data_offset = 0;
+    
+    // Allocate and Link Clusters!
+    for (int i = 0; i < clusters_needed; i++) {
+        unsigned int free_cluster = 0;
+        for (unsigned int c = 2; c < 65536; c++) { 
+            unsigned int sec = fat_reserved_sectors + ((c * 4) / 512);
+            unsigned int off = c % 128;
+            if (sec != current_fat_sec) {
+                if (current_fat_sec != 0xFFFFFFFF) ata_write_sector(current_fat_sec, fat_buf);
+                ata_read_sector(sec, fat_buf); current_fat_sec = sec;
+            }
+            if (((unsigned int*)fat_buf)[off] == 0x00000000) {
+                free_cluster = c;
+                ((unsigned int*)fat_buf)[off] = 0x0FFFFFFF; 
+                break;
+            }
+        }
+        if (free_cluster == 0) return; // Disk Full
+        if (first_cluster == 0) first_cluster = free_cluster;
+        
+        if (prev_cluster != 0) {
+            unsigned int p_sec = fat_reserved_sectors + ((prev_cluster * 4) / 512);
+            unsigned int p_off = prev_cluster % 128;
+            if (p_sec != current_fat_sec) {
+                ata_write_sector(current_fat_sec, fat_buf); 
+                ata_read_sector(p_sec, fat_buf); current_fat_sec = p_sec;
+            }
+            ((unsigned int*)fat_buf)[p_off] = free_cluster;
+        }
+        prev_cluster = free_cluster;
+        
+        // Write Sector Chunk
+        unsigned int data_lba = first_data_sector + ((free_cluster - 2) * fat_sectors_per_cluster);
+        unsigned char data_sec[512] = {0};
+        int bytes_to_copy = data_size - data_offset;
+        if (bytes_to_copy > 512) bytes_to_copy = 512;
+        
+        for(int b=0; b<bytes_to_copy; b++) data_sec[b] = data[data_offset++];
+        ata_write_sector(data_lba, data_sec);
     }
-    if (free_cluster == 0) return;
-    ata_write_sector(fat_lba, sec_buf);
-
-    unsigned int root_lba = first_data_sector + ((fat_root_cluster - 2) * fat_sectors_per_cluster);
-    ata_read_sector(root_lba, sec_buf);
+    if (current_fat_sec != 0xFFFFFFFF) ata_write_sector(current_fat_sec, fat_buf);
     
+    // Root Directory Entry setup
+    unsigned char root_buf[512] = {0}; // MEMORY CORRUPTION FIX
+    unsigned int root_lba = first_data_sector + ((fat_root_cluster - 2) * fat_sectors_per_cluster);
+    ata_read_sector(root_lba, root_buf);
     int entry_offset = -1;
     for (int i = 0; i < 16; i++) {
         int off = i * 32;
-        if (sec_buf[off] == 0x00 || sec_buf[off] == 0xE5) { entry_offset = off; break; }
+        if (root_buf[off] == 0x00 || root_buf[off] == 0xE5) { entry_offset = off; break; }
     }
     if (entry_offset == -1) return;
-
     char target[11]; format_fat_name(filename, ext, target);
-    for(int i=0; i<11; i++) sec_buf[entry_offset + i] = target[i];
+    for(int i=0; i<11; i++) root_buf[entry_offset + i] = target[i];
     
-    sec_buf[entry_offset + 11] = 0x20; 
-    sec_buf[entry_offset + 20] = (free_cluster >> 16) & 0xFF; 
-    sec_buf[entry_offset + 21] = (free_cluster >> 24) & 0xFF;
-    sec_buf[entry_offset + 26] = free_cluster & 0xFF;         
-    sec_buf[entry_offset + 27] = (free_cluster >> 8) & 0xFF;
-    sec_buf[entry_offset + 28] = data_size & 0xFF;
-    sec_buf[entry_offset + 29] = (data_size >> 8) & 0xFF;
-    sec_buf[entry_offset + 30] = (data_size >> 16) & 0xFF;
-    sec_buf[entry_offset + 31] = (data_size >> 24) & 0xFF;
+    root_buf[entry_offset + 11] = 0x20; 
+    root_buf[entry_offset + 20] = (first_cluster >> 16) & 0xFF; 
+    root_buf[entry_offset + 21] = (first_cluster >> 24) & 0xFF;
+    root_buf[entry_offset + 26] = first_cluster & 0xFF;         
+    root_buf[entry_offset + 27] = (first_cluster >> 8) & 0xFF;
+    root_buf[entry_offset + 28] = data_size & 0xFF;
+    root_buf[entry_offset + 29] = (data_size >> 8) & 0xFF;
+    root_buf[entry_offset + 30] = (data_size >> 16) & 0xFF;
+    root_buf[entry_offset + 31] = (data_size >> 24) & 0xFF;
+    ata_write_sector(root_lba, root_buf);
+}
+// ==============================================================
+// NAYA: VFS BRIDGE (HARD DRIVE KO 'MY PC' SE JODNE KE LIYE)
+// ==============================================================
+extern void create_file(char* name, char* content);
+extern int file_count;
 
-    ata_write_sector(root_lba, sec_buf);
+void fat32_sync_vfs() {
+    file_count = 0; // 1. Purani RAM memory clear karo
+    
+    // 2. System App (Welcome App) wapas daalo taaki Start Menu na tute
+    create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
 
-    unsigned int data_lba = first_data_sector + ((free_cluster - 2) * fat_sectors_per_cluster);
-    unsigned char data_sec[512] = {0}; 
-    for(int i=0; i < data_size && i < 512; i++) data_sec[i] = data[i];
-    ata_write_sector(data_lba, data_sec);
+    // 3. Hard Drive ka Root Folder read karo
+    unsigned char sec_buf[512] = {0}; 
+    unsigned int root_lba = first_data_sector + ((fat_root_cluster - 2) * fat_sectors_per_cluster);
+    ata_read_sector(root_lba, sec_buf);
+    
+    for (int i = 0; i < 16; i++) {
+        int off = i * 32;
+        if (sec_buf[off] == 0x00) break;
+        if (sec_buf[off] == 0xE5 || sec_buf[off + 11] == 0x0F) continue;
+
+        // 4. File ka naam nikalo (e.g., IMG.BMP)
+        char fname[13]; int p = 0;
+        for (int j = 0; j < 8; j++) { if (sec_buf[off + j] != ' ') fname[p++] = sec_buf[off + j]; }
+        fname[p++] = '.';
+        for (int j = 0; j < 3; j++) { if (sec_buf[off + 8 + j] != ' ') fname[p++] = sec_buf[off + 8 + j]; }
+        fname[p] = '\0';
+
+        // 5. 'My PC' App ko batane ke liye list mein add karo!
+        if (fname[0] == 'N' && fname[1] == 'O' && fname[2] == 'T') {
+            // Agar Note hai toh uska text bhi nikal lo (taaki double click pe khule!)
+            char tmp[512] = {0}; int l = 0;
+            fat32_read_file("NOTE", "TXT", ( char*)tmp, &l);
+            tmp[l] = '\0';
+            create_file(fname, tmp);
+        } else {
+            // Agar Image hai toh bas naam show karo
+            create_file(fname, "<HDD BINARY FILE>");
+        }
+    }
 }
 #endif

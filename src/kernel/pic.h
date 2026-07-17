@@ -12,7 +12,30 @@ extern void context_switch_handler();
 // ==========================================
 // src/kernel/pic.h - UPDATE
 // ==========================================
+// ==============================================================
+// NAYA: HARDWARE TIMER (PIT) SETUP FOR MULTITASKING
+// ==============================================================
 
+// PIT ko 100 Hz (100 times per second) par set karo
+void init_timer() {
+    unsigned int divisor = 1193180 / 100; // 100 Hz
+    
+    // Command byte bhej kar PIT ko configure karo
+    outb(0x43, 0x36);
+    
+    // Divisor ko 2 bytes mein bhejo
+    outb(0x42, (unsigned char)(divisor & 0xFF));
+    outb(0x42, (unsigned char)((divisor >> 8) & 0xFF));
+}
+
+// Yeh function har baar tab chalega jab Timer tick karega (Har 10 millisecond mein)
+volatile int global_ticks = 0;
+void timer_irq_handler() {
+    global_ticks++;
+    // Yahan hum baad mein Task Switching (Context Switch) ka logic lagayenge!
+    
+    outb(0x20, 0x20); // EOI (End of Interrupt) PIC ko bhejo
+}
 void pic_init() {
     // ICW1: Init
     outb(0x20, 0x11); outb(0xA0, 0x11);

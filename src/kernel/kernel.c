@@ -15,6 +15,11 @@
 #include "../drivers/net.h"
 #include "../drivers/ata.h"
 #include "../fs/fat32.h"
+
+extern void switch_to_user_mode(void* entry_point);
+// NAYA MAGIC: 208 KB ka Global Paint Buffer (Header + Pixels)
+unsigned char paint_export_buffer[208054]; 
+extern unsigned int hd_paint_canvas[];
 // DAY 162: Z-Index Memory
 int z_bg_app = 0;
 int z_bg_x = 340;
@@ -94,8 +99,20 @@ void hd_play_sound(unsigned int nFrequence) {
 
 void hd_stop_sound() { unsigned char tmp = inb(0x61) & 0xFC; outb(0x61, tmp); }
 void background_test_task() { while(1) { __asm__ volatile ("nop"); } }
-
+// Yeh function kabhi Ring 0 ka chehra nahi dekhega!
+void my_first_user_app() {
+    // Agar hum yahan tak pohoch gaye bina crash hue, toh matlab Ring 3 kaam kar raha hai!
+    hd_print("[RING 3] Hello from USER MODE! OS is now Hack-Proof!");
+    
+    while(1) {
+        // App yahan background mein chalti rahegi infinite loop mein
+        // Par kyu ki Timer aane wala hai, OS freeze nahi hoga!
+        __asm__ volatile("nop"); 
+    }
+}
 void kernel_main(unsigned int magic, unsigned int addr) {
+
+    
     if (magic == 0x2BADB002) { 
         multiboot_info_t* mbi = (multiboot_info_t*) addr;
         if (mbi->flags & (1 << 12)) {
@@ -109,6 +126,7 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             create_os_task(background_test_task, 999); 
             idt_init(); 
             pic_init(); 
+            init_timer(); // <-- NAYA: CPU Timer Start!
             init_fs(); 
             init_mouse();
             init_acpi(); 
@@ -117,7 +135,6 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             vesa_framebuffer = (unsigned int*) fb_addr;
 
           play_boot_animation();
-            create_file("app.ind", "T:Welcome App;M:What is your name?;I:Enter Name;B:Submit;");
             
             // ==============================================================
             // 1. NETWORK SYSTEM INITIALIZE
@@ -146,10 +163,18 @@ void kernel_main(unsigned int magic, unsigned int addr) {
             // ==============================================================
             hd_print("[HDD] Mounting C: Drive...");
             init_fat32();
+            fat32_sync_vfs();
             fat32_list_root();
 
-            // Yahan se tumhare saare variables shuru hote hain
-            int app_state = -1; int win_x = 312, win_y = 200; 
+          //  hd_print("[OS] Switching to Ring 3 User Mode...");
+            
+            // Asli Jadoo Yahan Hoga!
+           // switch_to_user_mode(&my_first_user_app); 
+
+            // Niche tumhara purana while(1) loop...
+            int app_state = -1; int win_x = 312, win_y = 200;
+
+        
             int is_dragging = 0, start_menu_open = 0, is_minimized = 0;
             int ctx_open = 0, ctx_x = 0, ctx_y = 0; 
             char term_buffer[50] = {0}; int term_idx = 0;
@@ -404,9 +429,10 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         // ============================================
                         if (hd_mouse_x >= win_x+280 && hd_mouse_x <= win_x+325 && hd_mouse_y >= win_y+45 && hd_mouse_y <= win_y+70) {
                             
-                            // Ab yahan sirf "NOTE" likhna hai, baaki backend khud sambhal lega!
-                            fat32_write_file("NOTE", "TXT", term_buffer, term_idx);
+                           fat32_write_file("NOTE", "TXT", (unsigned char*)term_buffer, term_idx);
                             
+                            // NAYA: Save hote hi My PC ko refresh kar do!
+                            fat32_sync_vfs();
                             int k=0; char* sm = "Saved to Hard Drive!"; 
                             while(sm[k]) { notif_msg[k]=sm[k]; k++; } notif_msg[k]='\0'; 
                             notif_timer = 3; just_clicked = 0;
@@ -448,10 +474,37 @@ void kernel_main(unsigned int magic, unsigned int addr) {
                         }
                         if (just_clicked && hd_mouse_y >= win_y+260 && hd_mouse_y <= win_y+290) {
                             if (hd_mouse_x >= win_x+20 && hd_mouse_x <= win_x+50) brush_color = 0x00E53935; else if (hd_mouse_x >= win_x+60 && hd_mouse_x <= win_x+90) brush_color = 0x004CAF50; else if (hd_mouse_x >= win_x+100 && hd_mouse_x <= win_x+130) brush_color = 0x002196F3; else if (hd_mouse_x >= win_x+140 && hd_mouse_x <= win_x+170) brush_color = 0x00000000; else if (hd_mouse_x >= win_x+180 && hd_mouse_x <= win_x+210) brush_color = 0xFFFFFFFF; 
-                            else if (hd_mouse_x >= win_x + 225 && hd_mouse_x <= win_x + 270) {
-                                    if (find_file("IMG.BMP") != -1) { delete_file("IMG.BMP"); }
-                                    create_file("IMG.BMP", "IMAGE DATA");
-                                    int k = 0; char * sm = "Image Saved to Disk"; while (sm[k]) { notif_msg[k] = sm[k]; k++; } notif_msg[k] = '\0'; notif_timer = 2;
+                           else if (hd_mouse_x >= win_x + 225 && hd_mouse_x <= win_x + 270) {
+                                
+                                // 1. 54 Byte ka asli Windows BMP Header banayenge
+                                unsigned char bmp_hdr[54] = {
+                                    'B', 'M', 
+                                    0xB6, 0x2C, 0x03, 0x00, // File size = 208054 bytes
+                                    0,0, 0,0, 
+                                    54,0,0,0, 
+                                    40,0,0,0, 
+                                    260&0xFF, (260>>8)&0xFF, 0, 0, // Width = 260
+                                    0x38, 0xFF, 0xFF, 0xFF,        // Height = -200 (Top-Down BMP)
+                                    1,0, 32,0,                     // 32-bit ARGB Colors
+                                    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+                                };
+                                
+                                // 2. Header aur Canvas Data ko buffer mein copy karo
+                                for(int i=0; i<54; i++) paint_export_buffer[i] = bmp_hdr[i];
+                                
+                                unsigned char* canvas_ptr = (unsigned char*)hd_paint_canvas;
+                                for(int i=0; i<208000; i++) {
+                                    paint_export_buffer[54 + i] = canvas_ptr[i];
+                                }
+                               // 3. ASLI MAGIC: Hard Drive par 407 sectors write karo!
+                                fat32_write_file("IMG", "BMP", paint_export_buffer, 208054);
+                                
+                                // NAYA: Save hote hi My PC ko refresh kar do!
+                                fat32_sync_vfs();
+                                
+                                int k = 0; char * sm = "Real BMP Saved to HDD!"; 
+                                while (sm[k]) { notif_msg[k] = sm[k]; k++; } notif_msg[k] = '\0'; 
+                                notif_timer = 3;
                             }
                             just_clicked = 0;
                         }
